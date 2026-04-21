@@ -50,6 +50,29 @@ class: text-center
 -->
 
 ---
+
+# The footnote on that receipt
+
+<div class="text-xl opacity-80 mt-4">None of those were giant features. I ship in small pieces.</div>
+
+<div class="mt-8 text-base space-y-3">
+
+- Rule of thumb: bigger than a 3-point story → break it down. (AI helps with the breakdown too.)
+- Deploys gated by **feature flags** so "merge" and "release" decouple.
+- Larger batches → more risk, more tokens burned, same outages. AI doesn't change the physics of big-bang deploys.
+
+</div>
+
+<div class="mt-8 text-vc-teal-400 text-lg">The automation amplifies a good deployment model. It doesn't replace one.</div>
+
+<!--
+- Important disclaimer before anyone walks away thinking "so AI is YOLO-ing 10k-line refactors now."
+- I don't love story points either, but the 3-point heuristic holds — if it feels bigger than that, ask AI to help decompose it.
+- Feature flags are load-bearing. So is a test suite that runs in minutes, not hours.
+- The things that made small-batch safe in non-AI land still matter. Maybe more, because the machine can churn out volume fast.
+-->
+
+---
 layout: quote
 ---
 
@@ -203,19 +226,37 @@ Invisible guardrails. Shell commands that fire on Claude's lifecycle events.
 -->
 
 ---
-layout: center
+layout: two-cols
 ---
 
 # The hook I'm most grateful for
 
-<div class="asciinema-container mt-6 p-6 text-center opacity-80 max-w-3xl mx-auto"><div class="text-4xl my-8">▶</div><div>recordings/02-dcg-blocks.cast · ~20 sec</div><div class="text-xs mt-2 opacity-70">dcg refuses to let Claude rm -rf a worktree with unpushed commits</div></div>
+`dcg` — destructive command guard.
 
-<div class="mt-8 text-center text-sm opacity-70">Annoying sometimes. Worth every single false positive.</div>
+Fires before every Bash call. Matches known destructive patterns. Dumb on purpose — fires reliably, forever.
+
+A few weeks back it stopped Claude mid-cleanup from wiping a worktree with 3 days of unpushed commits I'd forgotten about.
+
+<span class="text-vc-teal-400 font-semibold text-sm">Annoying sometimes. Worth every single false positive.</span>
+
+::right::
+
+```text
+⚠️  destructive command guard
+
+Command: git worktree remove --force ...
+
+This will permanently delete:
+  • 12 unpushed commits
+  • 3 uncommitted files
+
+Proceed? [y/N] _
+```
 
 <!--
-- 20 seconds of watching dcg save me from myself.
-- Honest: yes, annoying when I *do* want to rm and have to confirm. Math still works.
-- Whole thesis in miniature: layer guardrails where they cost milliseconds, earn the right to move fast everywhere else.
+- The thesis of the whole talk in miniature: cheap guardrails at high frequency beat clever guardrails at low frequency.
+- dcg isn't clever. It's a regex check. But it runs on every single Bash call, forever, and that's the whole value.
+- Honest: yes, annoying when I actually want to rm something. Math still works — the times it saves you from yourself outweigh the times it slows you down.
 -->
 
 ---
@@ -453,69 +494,58 @@ flowchart LR
 layout: two-cols
 ---
 
-# War story #1
+# War story #1 — the token budget
 
-The tokens I burned because I was vague.
+I'm **engineering my token budget** now. That's new.
 
-I asked `/feature` to "add an admin view for workshops."
+Anthropic has tightened limits. My usage has grown to meet them.
 
-40 minutes, 200K tokens later: a view I didn't want, a schema change I didn't need, a PR I had to close.
+A vague prompt used to be a cheap mistake — bad output, try again. Now it's a real tradeoff against the next thing I want to run today.
 
-The automation didn't save me from under-specifying. It let me fail faster and more expensively.
-
-<span class="text-vc-teal-400 font-semibold text-sm">Lesson: the quality of the spec still gates everything.</span>
+<span class="text-vc-teal-400 font-semibold text-sm">Lesson: spec quality isn't craftsmanship anymore — it's budget discipline.</span>
 
 ::right::
 
-<div class="ml-6 mt-10 p-5 rounded-lg" style="background:#2C3447;border-left:4px solid #5DCAA5;"><div class="text-xs opacity-60 mb-2 font-mono">What I learned to say instead:</div><div class="text-sm font-mono">"Admin view at <code>/admin/workshops</code> listing existing workshops only — no create/edit in this PR. Columns: name, slug, creator, published state. Use existing <code>AdminLayout</code>. Auth-gated to org admins. Out of scope: schema changes."</div></div>
+<div class="ml-6 mt-10 p-5 rounded-lg" style="background:#2C3447;border-left:4px solid #5DCAA5;"><div class="text-xs opacity-60 mb-2 font-mono">What I force myself to write now:</div><div class="text-sm font-mono">"Admin view at <code>/admin/workshops</code> listing existing workshops only — no create/edit in this PR. Columns: name, slug, creator, published state. Use existing <code>AdminLayout</code>. Auth-gated to org admins. <strong>Out of scope:</strong> schema changes."</div></div>
 
 <!--
-- Honest moment. The machine is a force multiplier — in both directions.
-- I now spend more time upfront. The /ticket skill interrogates me until ACs are tight.
-- If you take nothing else: invest in the spec. Automation amplifies clarity AND ambiguity.
+- The honest cost story — not the speed story. Limits have tightened while my usage went up.
+- Every vague /feature invocation is now weighed against: will I run out of runway this week?
+- The /ticket skill interrogates me until ACs are tight — that used to be craft, now it's budget.
+- Meta-point: as AI coding matures, token budget becomes a first-class thing you engineer. Plan for it.
 -->
 
 ---
 layout: two-cols
 ---
 
-# War story #2
+# War story #2 — CI costs
 
-The day `dcg` saved me.
+Even with all the safety, the **CI bill surprised me**.
 
-Claude was cleaning up a stale worktree. Ran:
+`/prloop-enhanced` loops on review feedback. Each iteration = another push = another preview build + full test run.
 
-```bash
-git worktree remove --force \
-  ../rootnote-worktrees/feat-big-migration
-```
+Four iterations × a couple-hundred-second builds × many PRs/day = real dollars.
 
-That worktree had 3 days of unpushed commits I hadn't touched in a week. I'd forgotten.
-
-`dcg` stopped the command. Forced a confirmation. I said no.
-
-<span class="text-vc-teal-400 font-semibold text-sm">The layered defense wasn't theoretical that day.</span>
+<span class="text-vc-teal-400 font-semibold text-sm">Time saved trades against compute spent. The math moved.</span>
 
 ::right::
 
-<div class="ml-6 mt-10"></div>
+<div class="ml-6"></div>
 
-```text
-⚠️  destructive command guard
+### What I'm engineering now
 
-Command: git worktree remove --force ...
+- **Fewer pushes per loop** — coalesce edits, review locally with `/iterative-review` before pushing at all
+- **Smaller builds** — app refactor in flight so preview deploys ship less per PR
+- **Cheaper preview envs** — rethinking what has to spin up for every single review iteration
 
-This will permanently delete:
-  • 12 unpushed commits
-  • 3 uncommitted files
-
-Proceed? [y/N] _
-```
+<div class="text-xs opacity-60 mt-4">The automation took one bottleneck and moved it somewhere else. Keep watching where it goes.</div>
 
 <!--
-- "Thank god" moment. Annoying prompts earn their keep every few weeks.
-- dcg isn't clever — it's dumb. Matches known destructive patterns. Fires reliably, on every Bash call, forever.
-- Cheap guardrails at high frequency > clever guardrails at low frequency.
+- Second face of the cost coin. Tokens upstream, CI compute downstream.
+- The push-loop was invisible to me until the monthly bill showed up. Every iteration is a full preview build.
+- This is why /iterative-review matters beyond review quality — it keeps the loop local so CI isn't the review tool.
+- Honest: I'm still figuring this one out. Smaller app surface + fewer pushes + smarter previews. All in progress.
 -->
 
 ---

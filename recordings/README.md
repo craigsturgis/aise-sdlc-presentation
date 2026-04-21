@@ -42,7 +42,11 @@ asciinema rec recordings/01-gwg-feature.cast \
 Trim with any editor — asciinema cast files are JSON, and `asciinema-edit` can cut
 chunks without re-recording.
 
-## 02 — `dcg` blocks a destructive command (~20 sec)
+## 02 — `dcg` blocks a destructive command (~20 sec) — OPTIONAL
+
+The dcg slide now ships a static ASCII rendering of the warning, so
+this clip is a bonus. Record it if you want a live-feel moment during
+the hooks section; otherwise the slide stands on its own.
 
 Purpose: "watch a hook fire" moment on slide 9.
 
