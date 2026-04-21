@@ -1,0 +1,158 @@
+/* Vibecto brand palette — from ~/Downloads/vibecto_brand_palette.html */
+
+:root {
+  --vc-slate-deep: #141824;
+  --vc-slate-mid: #1E2433;
+  --vc-slate-light: #2C3447;
+
+  --vc-teal-50: #E1F5EE;
+  --vc-teal-100: #9FE1CB;
+  --vc-teal-400: #5DCAA5;
+  --vc-teal-600: #1D9E75;
+  --vc-teal-800: #085041;
+
+  --vc-warm-white: #F5F1E8;
+  --vc-warm-gray: #B8B4A8;
+  --vc-warm-gray-dark: #5A5750;
+
+  --slidev-theme-primary: var(--vc-teal-400);
+  --slidev-code-radius: 8px;
+}
+
+/* Dark theme by default */
+.slidev-layout {
+  background: var(--vc-slate-mid);
+  color: var(--vc-warm-white);
+}
+
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3,
+.slidev-layout h4 {
+  color: var(--vc-warm-white);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.slidev-layout h1 {
+  color: var(--vc-teal-400);
+}
+
+.slidev-layout a {
+  color: var(--vc-teal-400);
+  text-decoration-color: var(--vc-teal-600);
+}
+
+.slidev-layout code {
+  background: var(--vc-slate-light);
+  color: var(--vc-teal-100);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.slidev-layout pre {
+  background: var(--vc-slate-deep) !important;
+  border: 1px solid var(--vc-slate-light);
+  border-radius: 8px;
+}
+
+.slidev-layout blockquote {
+  border-left: 3px solid var(--vc-teal-400);
+  color: var(--vc-warm-gray);
+  padding-left: 1em;
+  font-style: italic;
+}
+
+.slidev-layout strong {
+  color: var(--vc-teal-100);
+}
+
+/* Cover layout */
+.slidev-layout.cover,
+.slidev-layout.intro {
+  background: radial-gradient(ellipse at top left, var(--vc-slate-light) 0%, var(--vc-slate-mid) 40%, var(--vc-slate-deep) 100%);
+}
+
+/* Section dividers */
+.slidev-layout.section {
+  background: var(--vc-slate-deep);
+}
+.slidev-layout.section h1 {
+  font-size: 4rem;
+  color: var(--vc-teal-400);
+  border-left: 6px solid var(--vc-teal-400);
+  padding-left: 0.5em;
+}
+
+/* Big stat / receipt layout helper */
+.big-stat {
+  font-size: 5.5rem;
+  font-weight: 700;
+  color: var(--vc-teal-400);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.big-stat-label {
+  color: var(--vc-warm-gray);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 0.5rem;
+}
+
+/* Pull-quote for CLAUDE.md scar-tissue slides */
+.pull-quote {
+  font-size: 2.4rem;
+  line-height: 1.25;
+  color: var(--vc-warm-white);
+  font-weight: 500;
+  max-width: 20ch;
+}
+
+.pull-quote-attribution {
+  color: var(--vc-teal-400);
+  font-size: 1rem;
+  font-family: var(--slidev-font-mono, "JetBrains Mono", monospace);
+  margin-top: 1.5rem;
+}
+
+/* Tradeoff two-column */
+.tradeoff-col {
+  background: var(--vc-slate-light);
+  border-radius: 10px;
+  padding: 1.5rem;
+  border-top: 3px solid var(--vc-teal-400);
+}
+.tradeoff-col.warn {
+  border-top-color: #E8A87C;
+}
+
+/* Asciinema iframe/container */
+.asciinema-container {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--vc-slate-light);
+  background: var(--vc-slate-deep);
+}
+
+/* Hook/defense-in-depth grid cell — used on slide 9 */
+.grid-cell {
+  background: var(--vc-slate-light);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+.grid-cell.active {
+  background: var(--vc-teal-800);
+  border-color: var(--vc-teal-400);
+  color: var(--vc-teal-50);
+}
+
+/* Monaco / Shiki tweaks */
+.shiki, .slidev-code {
+  background: var(--vc-slate-deep) !important;
+}
