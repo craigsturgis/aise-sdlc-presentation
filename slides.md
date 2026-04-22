@@ -112,11 +112,11 @@ gwg feat/ROO-981-onboarding-questions
 layout: center
 ---
 
-# Act 1 — watch it run
+# Act 1 — watch it run (dramatized)
 
 <AsciinemaPlayer src="/recordings/01-gwg-feature.cast" :speed="1.5" :autoplay="true" :loop="false" :cols="120" :rows="30" />
 
-<div class="text-xs mt-2 opacity-60 text-center">Real session replayed from the transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged.<br/><span class="text-vc-teal-400">7h 11m elapsed · 1h 50m attended · 4h 28m walked away</span> <span class="opacity-70">(Claude crash + a long break)</span></div>
+<div class="text-xs mt-2 opacity-60 text-center">Real session "replayed" from the analyzed transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged.<br/><span class="text-vc-teal-400">1h 50m clock time</span></div>
 
 <!--
 - Mostly silent. A few beats to land out loud:
@@ -145,7 +145,9 @@ layout: section
 
 **Convention-over-configuration.** Branch name routes to the right skill before Claude even starts.
 
-```mermaid {scale: 0.9}
+<div class="flex justify-center">
+
+```mermaid {scale: 0.7}
 flowchart LR
   A["gwg fix/ROO-99-checkout"] --> B{"parse prefix"}
   B -->|feat/| C["/feature"]
@@ -154,6 +156,8 @@ flowchart LR
   D --> F["worktree + env bootstrap"]
   F --> G["claude '/bugfix ROO-99'"]
 ```
+
+</div>
 
 <div class="text-sm opacity-70 mt-6"><code>.worktree-setup</code>(per project script) copies env files, picks a free port (3001–3099), runs <code>pnpm install</code>, offers AWS SSO login. One script means <em>n</em> worktrees don't fight over state.</div>
 
@@ -292,9 +296,11 @@ User will need to run manually
 
 ---
 
-# Layer 4 — Skills
+<div class="text-center mb-4 mt-2 text-2xl font-semibold">Layer 4 — Skills</div>
 
-```mermaid {scale: 0.7}
+<div class="flex justify-center items-center">
+
+```mermaid {scale: 0.55}
 flowchart TD
   subgraph entry["Entry points"]
     feature["/feature"]
@@ -327,14 +333,12 @@ flowchart TD
   style cra fill:#2C3447,color:#9FE1CB,stroke:#5DCAA5
 ```
 
-<div class="text-sm opacity-70 mt-4"><strong>Orchestrators</strong> call other skills. <strong>Leaves</strong> do one thing. All three orchestrators converge on <code>/prloop-enhanced</code>. <code>/iterative-review</code> fans out four parallel reviewers — more on that shortly.</div>
+</div>
 
 <!--
-- Orchestrators: /feature, /bugfix, /chore. ~500-line prompts. Read ticket → plan → TDD → verify → docs → handoff.
-- /prloop-enhanced: self-review, simplify, reflect, commit, open PR, loop on CI + review feedback until green.
-- /followup: Linear-first capture for anything surfaced during a PR or review.
-- /iterative-review: I'll come back to this on a later slide — it's how I pre-empt the GH Action reviewer.
+- Say out loud what the diagram shows: Orchestrators /feature, /bugfix, /chore converge on /prloop-enhanced. Leaves do one thing. /iterative-review fans out 4 specialists. /review-learnings is opt-in after each run.
 - Change /prloop-enhanced once, all three entry points get the new behavior. That's the composability payoff.
+- See backup: "Skills — text form" for the full list if this diagram gets fuzzy on the projector.
 -->
 
 ---
@@ -408,7 +412,9 @@ Review comments come back in **2–5 min**. `/prloop-enhanced` polls, reads them
 
 <div class="text-sm opacity-70 mb-4">Runs the same review the GH Action will run — <em>before</em> I push. Up to 4 iterations, each with a parallel specialist fan-out.</div>
 
-```mermaid {scale: 0.95}
+<div class="flex justify-center">
+
+```mermaid {scale: 0.65}
 flowchart LR
   diff[["diff ready"]] --> gen["generalist<br/>code-review-architect"]
   diff --> spec1["scale / N+1<br/>specialist"]
@@ -428,6 +434,8 @@ flowchart LR
   style spec3 fill:#2C3447,color:#9FE1CB,stroke:#5DCAA5
   style push fill:#1D9E75,color:#F5F1E8
 ```
+
+</div>
 
 <div class="text-sm opacity-70 mt-4">Specialists exist because <strong>narrow concerns routinely get lost in the breadth of a generalist checklist.</strong> Fanning out in parallel costs wall-clock-time once; catches things that would bounce me on GH later.</div>
 
@@ -472,7 +480,9 @@ layout: two-cols
 
 # The loop that closes itself
 
-```mermaid {scale: 0.95}
+<div class="flex justify-center">
+
+```mermaid {scale: 0.75}
 flowchart LR
   A[Skill hits edge case] --> B[I fix it]
   B --> C["/review-learnings<br/>proposes CLAUDE.md update"]
@@ -485,6 +495,8 @@ flowchart LR
   style D fill:#1D9E75,color:#F5F1E8
   style E fill:#2C3447,color:#F5F1E8,stroke:#5A5750
 ```
+
+</div>
 
 <div class="mt-8 text-center text-xl">The skills teach CLAUDE.md.<br/>CLAUDE.md teaches the skills.<br/><span class="text-vc-teal-400">Knowledge compounds.</span></div>
 
@@ -685,4 +697,88 @@ pnpm install
 <!--
 - Organic roadmap. Build the next piece when I hit the friction.
 - Meta-point: build automation incrementally, scar-tissue style. Don't design it all upfront.
+-->
+
+---
+
+# Backup: Shell routing — text form
+
+<div class="text-sm opacity-70 mb-4">Same content as the Layer 1 diagram, in case the mermaid is fuzzy on the projector.</div>
+
+| Branch prefix | Skill invoked | Argument |
+|---|---|---|
+| `feat/ROO-42-…` | `/feature` | `ROO-42` |
+| `fix/ROO-99-…` | `/bugfix` | `ROO-99` |
+| `chore/ROO-55-…` | `/chore` | `ROO-55` |
+
+**Pipeline**
+
+1. `gwg <branch>` parses the prefix
+2. Maps prefix → skill
+3. Creates worktree, runs `.worktree-setup` (env + port + install)
+4. Launches Claude Code with `/<skill> <ticket>` pre-loaded
+
+---
+
+# Backup: Skills — text form
+
+### Orchestrators (call other skills)
+
+- **`/feature ROO-XXX`** — ticket → plan → TDD → verify → docs → `/prloop-enhanced`
+- **`/bugfix ROO-XXX`** — same, but bug-first TDD (reproduce → fail → fix → pass)
+- **`/chore ROO-XXX`** — same, classifies chore type to pick testing strategy
+- **`/prloop-enhanced`** — shared final mile: self-review → `/simplify` → reflect → commit → PR → CI loop
+- **`/sentry-fix`** · **`/cloudwatch-errors`** — error-driven entry points → `/five-whys`
+
+### Leaves (single purpose)
+
+`/ticket` · `/verify` · `/regression` · `/test-signup` · `/followup` · `/five-whys` · `/review-learnings` (opt-in meta) · `/prfeedback` · `/db-connect` · `/db-analysis`
+
+### Plugin-contributed
+
+`/simplify` (code-simplifier) · `/code-review:code-review` · `/frontend-design:frontend-design` · `/vercel:*` (~20) · `/telegram:*`
+
+### The special one
+
+**`/iterative-review`** → fans out four parallel reviewers via the `code-review-architect` subagent: generalist + scale/N+1 + silent-failure + security/API-surface specialist. Loops up to 4× until convergence.
+
+---
+
+# Backup: `/iterative-review` — text form
+
+**Problem:** GH Action reviewer is slow (2–5 min per push). Push-and-wait loops eat CI budget and wall-clock time.
+
+**Solution:** run the same review locally *before* pushing, with parallel specialists.
+
+**Flow:**
+
+1. `diff ready` → fan out 4 reviewers in parallel
+2. Reviewers:
+   - **generalist** — full checklist
+   - **scale / N+1 specialist** — performance, query patterns
+   - **silent-failure specialist** — swallowed errors, null returns
+   - **security & API-surface specialist** — auth, input validation, exposed endpoints
+3. Merge findings → if issues, apply fixes, loop back (max 4 iterations)
+4. If clean → push. The GH Action reviewer now finds little.
+
+**Why four?** Narrow concerns routinely get lost in a generalist checklist. Parallel specialists cost one wall-clock pass; catch things that would otherwise bounce the PR later.
+
+---
+
+# Backup: the self-closing loop — text form
+
+**How knowledge compounds:**
+
+1. A skill hits an edge case during a real session.
+2. I fix the specific problem.
+3. `/review-learnings` (opt-in after `/feature`, `/bugfix`, `/chore`) analyzes session logs + diffs.
+4. It proposes updates to `CLAUDE.md`, skills, or testing guidelines — only changes with **compounding value** across future sessions.
+5. I approve ~1 in 5. Approved ones become permanent scar tissue.
+6. Future sessions inherit the fix automatically. Back to step 1.
+
+<div class="mt-6 text-vc-teal-400">The skills teach CLAUDE.md. CLAUDE.md teaches the skills.</div>
+
+<!--
+- This is the differentiator vs "just AI writes code." The system learns with me.
+- /review-learnings rejects small one-off items. Only compounding value passes the filter.
 -->
