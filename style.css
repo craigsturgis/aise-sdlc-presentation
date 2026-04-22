@@ -166,12 +166,15 @@
 }
 
 /* Two-column layout needs breathing room between the sides.
-   Slidev's default gap is tight; add more space and some padding. */
-.slidev-layout.two-cols {
-  gap: 3.5rem !important;
-  padding-inline: 2.5rem !important;
+   Slidev's two-cols layout has class `two-columns` (plural) with
+   .col-left and .col-right inner wrappers — no default gap. */
+.slidev-layout.two-columns {
+  gap: 3rem !important;
+  padding-inline: 2rem !important;
 }
-.slidev-layout.two-cols > div + div,
-.slidev-layout.two-cols > *:nth-child(2) {
-  padding-left: 0.5rem;
+.slidev-layout.two-columns .col-left {
+  padding-right: 1rem;
+}
+.slidev-layout.two-columns .col-right {
+  padding-left: 1rem;
 }
