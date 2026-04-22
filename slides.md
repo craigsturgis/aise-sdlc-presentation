@@ -108,6 +108,8 @@ gwg feat/ROO-981-onboarding-questions
 - We're going to rewind the tape and see everything that command triggers.
 -->
 
+---
+
 # Act 1 — watch it run
 
 <div class="mx-auto" style="max-width: 880px; max-height: 380px;">
