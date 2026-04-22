@@ -156,3 +156,11 @@
 .shiki, .slidev-code {
   background: var(--vc-slate-deep) !important;
 }
+
+/* Slidev bug workaround: goto dialog sometimes sticks visible because
+   the -top-20 UnoCSS class doesn't always compile. Hide it when its
+   input is disabled (the closed state); pressing `g` enables the input
+   and the dialog shows normally. */
+#slidev-goto-dialog:has(input:disabled) {
+  display: none !important;
+}
