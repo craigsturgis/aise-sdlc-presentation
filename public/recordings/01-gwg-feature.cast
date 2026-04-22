@@ -1,4 +1,4 @@
-{"version": 2, "width": 120, "height": 30, "timestamp": 1776827189, "env": {"SHELL": "/bin/zsh", "TERM": "xterm-256color"}, "title": "gwg feat/roo-981-onboarding-questions \u2192 PR #3134 merged"}
+{"version": 2, "width": 120, "height": 30, "timestamp": 1776827586, "env": {"SHELL": "/bin/zsh", "TERM": "xterm-256color"}, "title": "gwg feat/roo-981-onboarding-questions \u2192 PR #3134 merged"}
 [0.0, "o", "\u001b[90m~/src/rootnote\u001b[0m \u001b[38;5;79m❯\u001b[0m "]
 [0.6, "o", "g"]
 [0.636, "o", "w"]
@@ -82,7 +82,8 @@
 [24.221, "o", "  \u001b[33mround 3:\u001b[0m review feedback → fixes → push\r\n"]
 [24.671, "o", "  \u001b[33mround 4:\u001b[0m review feedback → fixes → push\r\n"]
 [25.121, "o", "  \u001b[33mround 5:\u001b[0m review feedback → fixes → push\r\n"]
-[25.571, "o", "  \u001b[32m✓ all checks passing   ✓ review approves\u001b[0m\r\n"]
-[26.271, "o", "\r\n"]
-[26.271, "o", "\u001b[1m\u001b[38;5;79m🚀 merged to dev.\u001b[0m\r\n"]
-[26.771, "o", "\u001b[2m   elapsed (wall-clock): 7h 04m  ·  attended work: ~40 min\u001b[0m\r\n"]
+[25.571, "o", "  \u001b[33mround 6:\u001b[0m review feedback → fixes → push\r\n"]
+[26.021, "o", "  \u001b[32m✓ all checks passing   ✓ review approves\u001b[0m\r\n"]
+[26.721, "o", "\r\n"]
+[26.721, "o", "\u001b[1m\u001b[38;5;79m🚀 merged to dev.\u001b[0m\r\n"]
+[27.221, "o", "\u001b[2m   elapsed: 7h 11m  ·  attended: ~1h 50m  ·  walked away / stuck: 4h 28m\u001b[0m\r\n"]

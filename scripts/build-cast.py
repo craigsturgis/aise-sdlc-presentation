@@ -21,6 +21,7 @@ import re
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # ───────────────────────── ANSI helpers ─────────────────────────
@@ -49,12 +50,50 @@ class SessionData:
     first_commit: str = "feat: initial implementation"
     files_touched: list = field(default_factory=list)
     review_rounds: int = 0
+    # time breakdown in seconds
+    elapsed_sec: int = 0       # total wall clock
+    attended_sec: int = 0      # continuous-attention (≤90s gaps)
+    active_sec: int = 0        # session-active (≤5min gaps)
+    idle_sec: int = 0          # elapsed - active
+    walkaway_count: int = 0    # number of >5-min gaps
+
+
+def _fmt(sec: int) -> str:
+    """Render seconds as '7h 12m' / '1h 50m' / '44m' / '28s'."""
+    td = timedelta(seconds=int(sec))
+    h, rem = divmod(int(td.total_seconds()), 3600)
+    m = rem // 60
+    s = rem % 60
+    if h: return f"{h}h {m:02d}m"
+    if m: return f"{m}m {s:02d}s"
+    return f"{s}s"
+
+
+def _compute_time(events: list, short_gap: int = 90, long_gap: int = 300):
+    """Return (elapsed, attended, active, idle, walkaway_count)."""
+    if len(events) < 2:
+        return 0, 0, 0, 0, 0
+    elapsed = (events[-1] - events[0]).total_seconds()
+    walkaways = 0
+    short_idle = 0
+    long_idle = 0
+    for i in range(1, len(events)):
+        dt = (events[i] - events[i-1]).total_seconds()
+        if dt > short_gap:
+            short_idle += dt
+        if dt > long_gap:
+            long_idle += dt
+            walkaways += 1
+    attended = elapsed - short_idle
+    active = elapsed - long_idle
+    return int(elapsed), int(attended), int(active), int(long_idle), walkaways
 
 
 def extract(session_path: Path) -> SessionData:
     d = SessionData()
     files = set()
     commit_subjects = []
+    timestamps = []
     for line in session_path.read_text().splitlines():
         try:
             e = json.loads(line)
@@ -62,6 +101,14 @@ def extract(session_path: Path) -> SessionData:
             continue
         t = e.get("type")
         msg = e.get("message") or {}
+
+        # collect timestamps for time-breakdown analysis
+        ts = e.get("timestamp") or msg.get("timestamp")
+        if ts:
+            try:
+                timestamps.append(datetime.fromisoformat(ts.replace("Z", "+00:00")))
+            except ValueError:
+                pass
 
         # first user slash invocation → ticket + branch hint
         if t == "user" and d.ticket == "ROO-???":
@@ -118,6 +165,10 @@ def extract(session_path: Path) -> SessionData:
         d.first_commit = commit_subjects[0]
     if d.ticket != "ROO-???":
         d.branch_hint = f"feat/{d.ticket.lower()}-onboarding-questions"
+
+    timestamps.sort()
+    d.elapsed_sec, d.attended_sec, d.active_sec, d.idle_sec, d.walkaway_count = \
+        _compute_time(timestamps)
     return d
 
 
@@ -280,7 +331,11 @@ def storyboard(cast: CastWriter, d: SessionData):
     cast.line()
     cast.line(f"{BOLD}{TEAL}🚀 merged to dev.{R}")
     cast.wait(0.5)
-    cast.line(f"{DIM}   elapsed (wall-clock): 7h 04m  ·  attended work: ~40 min{R}")
+    elapsed = _fmt(d.elapsed_sec)
+    attended = _fmt(d.attended_sec)
+    walked = _fmt(d.idle_sec)
+    cast.line(f"{DIM}   elapsed: {elapsed}  ·  attended: ~{attended}  ·  "
+              f"walked away / stuck: {walked}{R}")
     cast.wait(2.0)
 
 
@@ -305,6 +360,9 @@ def main(argv=None):
     print(f"extracted: ticket={data.ticket} pr=#{data.pr_number} "
           f"rounds={data.review_rounds} files={len(data.files_touched)}")
     print(f"first commit: {data.first_commit[:80]}")
+    print(f"time:  elapsed {_fmt(data.elapsed_sec)}  · "
+          f"attended {_fmt(data.attended_sec)}  · "
+          f"walked away {_fmt(data.idle_sec)} ({data.walkaway_count} gaps)")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     cast = CastWriter(width=args.width, height=args.height,

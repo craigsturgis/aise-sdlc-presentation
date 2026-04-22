@@ -116,7 +116,7 @@ layout: center
 
 <AsciinemaPlayer src="/recordings/01-gwg-feature.cast" :speed="1.5" :autoplay="true" :loop="false" :cols="120" :rows="30" />
 
-<div class="text-xs mt-2 opacity-60 text-center">Real session replayed from the transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged. Elapsed: 7h. Attended: ~40 min.</div>
+<div class="text-xs mt-2 opacity-60 text-center">Real session replayed from the transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged. <span class="text-vc-teal-400">7h 11m elapsed · 1h 50m attended · 4h 28m walked away (a Claude crash + a long break).</span></div>
 
 <!--
 - No narration. Just let it play.
