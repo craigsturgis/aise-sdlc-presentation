@@ -1,6 +1,6 @@
 ---
 theme: seriph
-title: Composable SDLC Automation with Claude Code
+title: Composable SDLC Automation with Ski
 info: |
   25-min meetup talk. Case study: the ~/src/rootnote setup —
   skills, hooks, CLAUDE.md, GitHub Actions — composed to automate the SDLC.
@@ -16,11 +16,11 @@ fonts:
 ---
 
 # Composable SDLC Automation
-## with Claude Code
+## with skills (and scripts, and hooks, and rules, etc)
 
 <div class="mt-12 opacity-80">Craig Sturgis · vibecto.ai</div>
 
-<div class="abs-br m-6 text-sm opacity-60">25 minutes · meetup · April 2026</div>
+<div class="abs-br m-6 text-sm opacity-60">April 2026</div>
 
 <!--
 - Hi, I'm Craig. I run vibecto.ai.
@@ -36,9 +36,9 @@ class: text-center
 
 # The receipt
 
-<div class="grid grid-cols-3 gap-10 mt-10"><div><div class="big-stat">540</div><div class="big-stat-label">Issues shipped</div></div><div><div class="big-stat">745</div><div class="big-stat-label">PRs merged</div></div><div><div class="big-stat">60</div><div class="big-stat-label">Working days</div></div></div>
+<div class="grid grid-cols-3 gap-10 mt-10"><div><div class="big-stat">540</div><div class="big-stat-label">items shipped in Q1 2026</div></div><div><div class="big-stat">745</div><div class="big-stat-label">PRs merged</div></div><div><div class="big-stat">60</div><div class="big-stat-label">Working days</div></div></div>
 
-<div class="mt-12 text-xl opacity-80">One builder. One low-impact incident.</div>
+<div class="mt-12 text-xl opacity-80">Just me. One low-impact incident.</div>
 
 <div class="mt-6 text-sm opacity-50"><a href="https://vibecto.ai/resources/540-issues-q1-agentic-pace">vibecto.ai/resources/540-issues-q1-agentic-pace</a></div>
 
@@ -53,7 +53,7 @@ class: text-center
 
 # The footnote on that receipt
 
-<div class="text-xl opacity-80 mt-4">None of those were giant features. I ship in small pieces.</div>
+<div class="text-xl opacity-80 mt-4">None of those 540 were giant features. I ship in small pieces.</div>
 
 <div class="mt-8 text-base space-y-3">
 
@@ -76,9 +76,8 @@ class: text-center
 layout: quote
 ---
 
-> "I kept hitting parallelization bottlenecks.
-> I wanted to take the grunt work out of it
-> and focus on the actual change."
+> "I wanted to find the edge of what was possible while still maintaining a good mental model of the system.
+> Bottlenecks to parallel work became the focus quickly."
 
 <div class="pull-quote-attribution mt-8">— the origin story</div>
 
@@ -98,10 +97,10 @@ class: text-center
 <div class="mt-10 mb-8 text-2xl opacity-80">One command to ship a feature</div>
 
 ```bash
-gwg feat/ROO-42-workshop-admin
+gwg feat/ROO-981-onboarding-questions
 ```
 
-<div class="mt-10 text-sm opacity-60 max-w-2xl mx-auto">Linear ticket <code>ROO-42</code> → isolated worktree → dev server on a free port → Claude Code boots with <code>/feature ROO-42</code> pre-loaded → TDD, tests, docs, visual verification, PR, CI loop, review feedback — all handled.</div>
+<div class="mt-10 text-sm opacity-60 max-w-2xl mx-auto">Linear ticket <code>ROO-981</code> → isolated worktree → dev server on a free port → Claude Code boots with <code>/feature ROO-42</code> pre-loaded → TDD, tests, docs, visual verification, PR, CI loop, review feedback — all handled.</div>
 
 <!--
 - One shell command. Branch name IS the interface.
@@ -150,7 +149,7 @@ flowchart LR
   F --> G["claude '/bugfix ROO-99'"]
 ```
 
-<div class="text-sm opacity-70 mt-6"><code>.worktree-setup</code> copies env files, picks a free port (3001–3099), runs <code>pnpm install</code>, offers AWS SSO login. One script means <em>n</em> worktrees don't fight over state.</div>
+<div class="text-sm opacity-70 mt-6"><code>.worktree-setup</code>(per project script) copies env files, picks a free port (3001–3099), runs <code>pnpm install</code>, offers AWS SSO login. One script means <em>n</em> worktrees don't fight over state.</div>
 
 <!--
 - Zero flags, zero config. Branch name IS the interface.
@@ -166,9 +165,13 @@ layout: two-cols
 
 **The shared brain.** Every session loads it automatically.
 
+Implement with Red + Green TDD
+
+Separate CLAUDE.md per monorepo modules + rules files
+
 Skills stay generic ("run the tests"). CLAUDE.md resolves that to `pnpm test:ci:web` — with the warning to *never* use `test:web` (watch mode hangs).
 
-It's also **scar tissue** — every incident I've hit is now a passive guardrail.
+It's also **scar tissue** — every issue I've hit that likely will recur is now a passive guardrail.
 
 ::right::
 
@@ -179,7 +182,7 @@ It's also **scar tissue** — every incident I've hit is now a passive guardrail
 <!--
 - Generic skill: "create a branch." CLAUDE.md: "branch from dev, not main, pattern feat/ROO-XXX."
 - Updating CLAUDE.md updates every skill simultaneously. No edits to 15 files.
-- Scar tissue: first time a test in web/pages/ broke prod, CLAUDE.md got a note. Never lost a minute to it again.
+- Scar tissue: first time a test in web/pages/ broke CI, CLAUDE.md got a note. Never lost a minute to it again.
 -->
 
 ---
@@ -188,7 +191,7 @@ layout: two-cols
 
 # Layer 3 — Hooks
 
-Invisible guardrails. Shell commands that fire on Claude's lifecycle events.
+Invisible guardrails. Shell commands that fire on Claude's lifecycle events. Many of these inspired by or lifted from [Anthony's presentation](https://panozzaj.com/presentations/agent-quality-gates/1) last month
 
 **PostToolUse — Write/Edit** (~5–700ms)
 
@@ -216,7 +219,7 @@ Invisible guardrails. Shell commands that fire on Claude's lifecycle events.
 
 - lint + typecheck + full test suite
 
-<div class="text-xs mt-6 opacity-60">Hooks share a common bash framework — JSON in, colored pass/fail out, never crash Claude (<code>trap 'exit 0' ERR</code>). <br/><code>slack-notify</code> lives in the repo but is currently parked — settings.json doesn't wire it.</div>
+<div class="text-xs mt-6 opacity-60">Hooks share a common bash framework — JSON in, colored pass/fail out, never crash Claude (<code>trap 'exit 0' ERR</code>). </div>
 
 <!--
 - Hooks are the part most people miss. Not prompts — shell commands on Claude's lifecycle.
@@ -229,13 +232,13 @@ Invisible guardrails. Shell commands that fire on Claude's lifecycle events.
 layout: two-cols
 ---
 
-# The hook I'm most grateful for
+# The hook that covers my behind
 
-`dcg` — destructive command guard.
+`dcg` — destructive command guard. [github repo](https://github.com/Dicklesworthstone/destructive_command_guard)
 
-Fires before every Bash call. Matches known destructive patterns. Dumb on purpose — fires reliably, forever.
+Fires before every Bash call. Super fast. Matches known destructive patterns. Has plugins for common things (terraform, postgres, your own custom stuff, etc) Dumb on purpose — fires reliably, forever.
 
-A few weeks back it stopped Claude mid-cleanup from wiping a worktree with 3 days of unpushed commits I'd forgotten about.
+I haven't needed it - but having it in place keeps me from worrying.
 
 <span class="text-vc-teal-400 font-semibold text-sm">Annoying sometimes. Worth every single false positive.</span>
 
@@ -246,11 +249,11 @@ A few weeks back it stopped Claude mid-cleanup from wiping a worktree with 3 day
 
 Command: git worktree remove --force ...
 
-This will permanently delete:
+BLOCKED! This would permanently delete:
   • 12 unpushed commits
   • 3 uncommitted files
 
-Proceed? [y/N] _
+User will need to run manually
 ```
 
 <!--
@@ -259,7 +262,7 @@ Proceed? [y/N] _
 - Honest: yes, annoying when I actually want to rm something. Math still works — the times it saves you from yourself outweigh the times it slows you down.
 -->
 
----
+<!-- ---
 
 # Defense in depth
 
@@ -279,7 +282,7 @@ Proceed? [y/N] _
 - Every row: a rule. Every column: a moment when it can fire.
 - No layer is sufficient alone. Together: nearly airtight.
 - This is the picture I'd put on the fridge.
--->
+--> -->
 
 ---
 
@@ -340,16 +343,11 @@ flowchart TD
 | **code-review** | `/code-review:code-review` — manual one-shot PR review |
 | **frontend-design** | `/frontend-design:frontend-design` — novel UI without AI stock aesthetic |
 | **typescript-lsp** | Real TS language server for go-to-def / diagnostics |
-| **telegram** | Bidirectional chat channel. Claude receives + replies *mid-session* |
-| **vercel** | ~20 skills + subagents for Next.js, AI SDK, deploy, functions |
 
 <div class="text-xs opacity-60 mt-4">Resolution: <code>project &gt; user &gt; plugin &gt; user-command</code>. Plugins drop in, project skills override where needed.</div>
 
 <!--
-- Big shift since I first built this: plugins are a first-class layer now.
-- /simplify used to be a user-level skill I wrote. Now it's a plugin — same capability, community-versioned, I track it like a dependency.
-- Telegram is the weird one: real I/O channel. I can be walking the dog and a long autonomous run pings me; I reply on the phone, it keeps going. Fills a gap Slack and macOS notifications don't.
-- Vercel plugin short-circuits so much doc lookup for Next.js / AI SDK work that I notice when I'm in a non-Vercel repo.
+- The claude published skills do a good job, I use them a lot. simplify stops sometimes inexplicably, still working on making it go
 - The key insight: plugins compose with my own stack under the same rules — hooks still fire on their tool calls, CLAUDE.md still shapes their behavior.
 -->
 
@@ -506,7 +504,7 @@ A vague prompt used to be a cheap mistake — bad output, try again. Now it's a 
 
 ::right::
 
-<div class="ml-6 mt-10 p-5 rounded-lg" style="background:#2C3447;border-left:4px solid #5DCAA5;"><div class="text-xs opacity-60 mb-2 font-mono">What I force myself to write now:</div><div class="text-sm font-mono">"Admin view at <code>/admin/workshops</code> listing existing workshops only — no create/edit in this PR. Columns: name, slug, creator, published state. Use existing <code>AdminLayout</code>. Auth-gated to org admins. <strong>Out of scope:</strong> schema changes."</div></div>
+<div class="ml-6 mt-10 p-5 rounded-lg" style="background:#2C3447;border-left:4px solid #5DCAA5;"><div class="text-xs opacity-60 mb-2 font-mono">Spending up to 20% time tweaking the workflow is necessary right now. Small changes can drive huge swings in token budget</div></div>
 
 <!--
 - The honest cost story — not the speed story. Limits have tightened while my usage went up.
@@ -560,22 +558,22 @@ This setup is tuned for **one person**. A team of 5 running `gwg` in parallel wo
 
 - Shared beads database → contention
 - Review-learnings proposals → need human arbitration
-- CLAUDE.md becomes political
+- CLAUDE.md gets (more) bloated
 - Skill authorship needs ownership
 
-Probably needs a "skill steward" role and a PR process for CLAUDE.md changes.
+I suspect splitting into smaller teams and team topologies will be even more critical
 
 ::right::
 
 <div class="ml-6"></div>
 
-### The review muscle I'm losing
+### The impacts
 
-I don't read every diff closely anymore. I read PR descriptions, skim the critical files, trust the review action.
+I don't read every diff closely anymore. I read PR descriptions, skim the critical files, trust the review action + verification skill since it's directly confirming each AC w/ tests, agent browser, or chrome-devtools
 
-That's a real skill atrophy. When the system breaks, I'm rustier at finding the root cause by eye.
+I still validate each change, but the temptation to ship it and move is real.
 
-<span class="text-vc-teal-400">I'm still deciding if this is a problem or just a skill reshuffle.</span>
+<span class="text-vc-teal-400">I'm still deciding if this is a problem or just the reality of moving up the stack.</span>
 
 <!--
 - Not a silver bullet. Real costs.
@@ -591,7 +589,7 @@ class: text-center
 
 # Takeaway
 
-<div class="mt-8 text-3xl font-semibold max-w-4xl mx-auto leading-snug">You can automate <span class="text-vc-teal-400">lots more</span> of your SDLC than you think — in <span class="text-vc-teal-400">composable</span> ways — and AI agents can help you.</div>
+<div class="mt-8 text-3xl font-semibold max-w-4xl mx-auto leading-snug">You can automate <span class="text-vc-teal-400">lots more</span> of your SDLC than you might think — in <span class="text-vc-teal-400">composable</span> ways — and AI agents can help you.</div>
 
 <div class="mt-16 grid grid-cols-3 gap-8 max-w-3xl mx-auto text-sm opacity-80"><div><div class="font-mono text-vc-teal-400">Overview doc</div><div class="mt-1">rootnote/docs/<br/>skill-composability.md</div></div><div><div class="font-mono text-vc-teal-400">Numbers</div><div class="mt-1">vibecto.ai/resources/<br/>540-issues-q1-agentic-pace</div></div><div><div class="font-mono text-vc-teal-400">Me</div><div class="mt-1">craig@vibecto.ai<br/>vibecto.ai</div></div></div>
 
