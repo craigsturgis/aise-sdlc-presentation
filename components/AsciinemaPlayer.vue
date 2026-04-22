@@ -33,6 +33,7 @@ onMounted(async () => {
     loop: props.loop ?? false,
     cols: props.cols ?? 120,
     rows: props.rows ?? 30,
+    fit: 'both',
     theme: 'monokai',
     idleTimeLimit: 1,
   })
@@ -49,5 +50,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border: 1px solid var(--vc-slate-light);
   background: var(--vc-slate-deep);
+  width: 100%;
+  max-width: 100%;
+}
+.asciinema-container :deep(.ap-player) {
+  max-width: 100%;
+  max-height: 100%;
 }
 </style>
