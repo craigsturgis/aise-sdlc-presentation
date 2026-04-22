@@ -190,7 +190,7 @@ It's also **scar tissue** — every issue I've hit that likely will recur is now
 
 <div class="ml-8 pull-quote">"Always set <code>restartPolicy = { enabled = false }</code> on ECS batch jobs. The module default restarts completed jobs indefinitely — caused <strong>duplicate email sends</strong> in prod."</div>
 
-<div class="ml-8 pull-quote-attribution">CLAUDE.md · note #12 · no hook can catch a Terraform default</div>
+<div class="ml-8 pull-quote-attribution">CLAUDE.md · note #12 · scar tissue from prod</div>
 
 <!--
 - Generic skill: "create a branch." CLAUDE.md: "branch from dev, not main, pattern feat/ROO-XXX."
