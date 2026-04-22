@@ -247,7 +247,7 @@ Invisible guardrails. Shell commands that fire on Claude's lifecycle events. Man
 layout: two-cols
 ---
 
-# The hook that covers my behind
+# The hook that covers my backside
 
 `dcg` — destructive command guard. [github repo](https://github.com/Dicklesworthstone/destructive_command_guard)
 
