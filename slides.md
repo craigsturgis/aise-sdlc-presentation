@@ -300,45 +300,38 @@ User will need to run manually
 
 <div class="flex justify-center items-center">
 
-```mermaid {scale: 0.55}
-flowchart TD
+```mermaid {scale: 0.6}
+flowchart LR
   subgraph entry["Entry points"]
+    direction TB
     feature["/feature"]
     bugfix["/bugfix"]
     chore["/chore"]
   end
 
-  feature --> prloop["/prloop-enhanced<br/>self-review · PR · CI loop"]
-  bugfix --> prloop
+  feature --> prloop
+  bugfix --> prloop["/prloop-enhanced<br/>self-review · PR · CI loop"]
   chore --> prloop
   prloop --> simplify["/simplify"]
-
-  feature -.->|opt-in| learnings["/review-learnings"]
-  bugfix -.-> learnings
-  chore -.-> learnings
+  prloop -.->|opt-in| learnings["/review-learnings"]
 
   iterreview["/iterative-review"] --> cra["code-review-architect ×4<br/>generalist + 3 specialists"]
 
-  subgraph leaves["Leaves"]
-    verify["/verify"]
-    regression["/regression"]
-    ticket["/ticket"]
-    fivewhys["/five-whys"]
-    followup["/followup"]
-  end
-
   style entry fill:#085041,color:#E1F5EE,stroke:#5DCAA5
-  style leaves fill:#2C3447,color:#F5F1E8,stroke:#5A5750
   style iterreview fill:#1D9E75,color:#F5F1E8,stroke:#5DCAA5
   style cra fill:#2C3447,color:#9FE1CB,stroke:#5DCAA5
+  style simplify fill:#2C3447,color:#F5F1E8,stroke:#5A5750
+  style learnings fill:#2C3447,color:#F5F1E8,stroke:#5A5750
 ```
 
 </div>
 
+<div class="text-xs opacity-60 text-center mt-4">Leaf skills (<code>/verify</code>, <code>/regression</code>, <code>/ticket</code>, <code>/followup</code>, <code>/five-whys</code>, …) listed in the text-form backup slide.</div>
+
 <!--
-- Say out loud what the diagram shows: Orchestrators /feature, /bugfix, /chore converge on /prloop-enhanced. Leaves do one thing. /iterative-review fans out 4 specialists. /review-learnings is opt-in after each run.
+- Say out loud what the diagram shows: Orchestrators /feature, /bugfix, /chore converge on /prloop-enhanced. /iterative-review fans out 4 specialists (that's the next slide). /review-learnings is opt-in after each run.
 - Change /prloop-enhanced once, all three entry points get the new behavior. That's the composability payoff.
-- See backup: "Skills — text form" for the full list if this diagram gets fuzzy on the projector.
+- Leaves are intentionally off the diagram — they do one thing and don't compose. Backup slide has the full list.
 -->
 
 ---
