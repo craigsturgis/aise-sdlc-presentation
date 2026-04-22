@@ -254,17 +254,45 @@ def storyboard(cast: CastWriter, d: SessionData):
     cast.line(f"  {GREEN}✓{R} mapped onboarding flow, schema patterns, auth helpers")
     cast.wait(0.5)
 
-    # Phase: Clarify
-    cast.line(f"{YELLOW}▸ 2 ambiguities before planning{R}")
-    cast.wait(0.5)
-    cast.line(f"  {GRAY}?{R} preserve answers on skip? {GRAY}→{R} {GREEN}yes{R}")
-    cast.wait(0.5)
-    cast.line(f"  {GRAY}?{R} analytics events? {GRAY}→{R} {GREEN}mixpanel, existing schema{R}")
+    # ─── The three human gates ───
+    # Gate 1: Clarify ambiguities
+    cast.line(f"{YELLOW}▸ gate 1/3{R}  {BOLD}ambiguities before planning{R}")
+    cast.wait(0.45)
+    cast.line(f"  {GRAY}?{R} preserve answers on skip? {GRAY}→{R} {TEAL}👤 yes{R}")
+    cast.wait(0.55)
+    cast.line(f"  {GRAY}?{R} analytics events for new step? {GRAY}→{R} {TEAL}👤 mixpanel + existing schema{R}")
+    cast.wait(0.7)
+
+    # Gate 2: Confirm acceptance criteria
+    cast.line(f"{YELLOW}▸ gate 2/3{R}  {BOLD}confirm acceptance criteria{R}")
+    cast.wait(0.45)
+    cast.line(f"  {GRAY}·{R} modal shows only on first login post-plan")
+    cast.wait(0.3)
+    cast.line(f"  {GRAY}·{R} skip preserves prior answers, doesn't overwrite")
+    cast.wait(0.3)
+    cast.line(f"  {GRAY}·{R} analytics fires on submit AND skip")
+    cast.wait(0.3)
+    cast.line(f"  {GRAY}·{R} no regression on existing select-plan flow")
     cast.wait(0.4)
-    cast.line(f"{DIM}▸ proposing acceptance criteria …{R}")
+    cast.line(f"  confirm? {GRAY}→{R} {TEAL}👤 approved{R}")
+    cast.wait(0.7)
+
+    # Gate 3: Approve the plan
+    cast.line(f"{YELLOW}▸ gate 3/3{R}  {BOLD}implementation plan (5 phases · ~8 files){R}")
+    cast.wait(0.45)
+    cast.line(f"  {GRAY}·{R} schema migration · {GRAY}·{R} /api/onboard/answers route")
+    cast.wait(0.3)
+    cast.line(f"  {GRAY}·{R} OnboardingQuestions component · {GRAY}·{R} analytics wiring · {GRAY}·{R} tests at each layer")
+    cast.wait(0.4)
+    cast.line(f"  ship it? {GRAY}→{R} {TEAL}👤 go{R}")
     cast.wait(0.8)
-    cast.line(f"  {GREEN}✓{R} plan approved")
-    cast.wait(0.5)
+
+    # Handoff marker — this is the KEY line
+    cast.line()
+    cast.line(f"{TEAL}━━━ handing off to autonomous mode ━━━{R}")
+    cast.line(f"{DIM}    (human attention: off until PR review arrives){R}")
+    cast.wait(1.2)
+    cast.line()
 
     # Phase: TDD
     cast.line(f"{DIM}▸ TDD — writing failing tests first …{R}")

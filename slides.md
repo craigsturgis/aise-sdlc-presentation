@@ -119,8 +119,11 @@ layout: center
 <div class="text-xs mt-2 opacity-60 text-center">Real session replayed from the transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged. <span class="text-vc-teal-400">7h 11m elapsed · 1h 50m attended · 4h 28m walked away (a Claude crash + a long break).</span></div>
 
 <!--
-- No narration. Just let it play.
-- This is a synthesized replay from the session JSONL — the real thing had hours of CI-wait dead time.
+- Mostly silent. A few beats to land out loud:
+  1. When the three GATES flash by — "these are the only moments I really had to be paying attention. Clarify ambiguities, confirm acceptance criteria, approve the plan."
+  2. When 'handing off to autonomous mode' appears — "this is the hinge. After this point, if I left it alone, it would keep going. That's the 1h 50m of attended work vs 7h elapsed."
+  3. The final elapsed/attended/walked-away line — that's the honest receipt under the big 540/745 number.
+- This is a synthesized replay from the session JSONL — the real thing had hours of CI-wait dead time plus a Claude crash.
 - After: "OK, now let's rewind and see what actually fired."
 -->
 
