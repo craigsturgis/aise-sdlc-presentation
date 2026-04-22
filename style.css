@@ -164,3 +164,14 @@
 #slidev-goto-dialog:has(input:disabled) {
   display: none !important;
 }
+
+/* Two-column layout needs breathing room between the sides.
+   Slidev's default gap is tight; add more space and some padding. */
+.slidev-layout.two-cols {
+  gap: 3.5rem !important;
+  padding-inline: 2.5rem !important;
+}
+.slidev-layout.two-cols > div + div,
+.slidev-layout.two-cols > *:nth-child(2) {
+  padding-left: 0.5rem;
+}
