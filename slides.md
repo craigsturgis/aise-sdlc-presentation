@@ -184,7 +184,9 @@ Separate CLAUDE.md per monorepo modules + rules files
 
 Skills stay generic ("run the tests"). CLAUDE.md resolves that to `pnpm test:ci:web` — with the warning to *never* use `test:web` (watch mode hangs).
 
-It's also **scar tissue** — every issue I've hit that likely will recur is now a passive guardrail.
+It's also **scar tissue** — every issue I've hit that likely will recur is now a candidate for a guardrail.
+
+WARNING: context bloat is possible here, needs managed.
 
 ::right::
 
