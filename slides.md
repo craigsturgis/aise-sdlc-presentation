@@ -34,11 +34,11 @@ layout: center
 class: text-center
 ---
 
-# The receipt
+# The Stats (Q1 2026)
 
-<div class="grid grid-cols-3 gap-10 mt-10"><div><div class="big-stat">540</div><div class="big-stat-label">items shipped in Q1 2026</div></div><div><div class="big-stat">745</div><div class="big-stat-label">PRs merged</div></div><div><div class="big-stat">60</div><div class="big-stat-label">Working days</div></div></div>
+<div class="grid grid-cols-3 gap-10 mt-10"><div><div class="big-stat">540</div><div class="big-stat-label">items shipped + released</div></div><div><div class="big-stat">745</div><div class="big-stat-label">PRs merged</div></div><div><div class="big-stat">60</div><div class="big-stat-label">Working days</div></div></div>
 
-<div class="mt-12 text-xl opacity-80">Just me. One low-impact incident.</div>
+<div class="mt-12 text-xl opacity-80">One product engineer. One low-impact incident.</div>
 
 <div class="mt-6 text-sm opacity-50"><a href="https://vibecto.ai/resources/540-issues-q1-agentic-pace">vibecto.ai/resources/540-issues-q1-agentic-pace</a></div>
 
@@ -63,7 +63,10 @@ class: text-center
 
 </div>
 
-<div class="mt-8 text-vc-teal-400 text-lg">The automation amplifies a good deployment model. It doesn't replace one.</div>
+<div class="mt-8 text-vc-teal-400 text-lg"><div>The automation amplifies a good deployment model + good CI. It doesn't replace one.</div><br/>
+<div>Start investing in it now if you don't have it. </div><br/>
+<div>If you do what I'm about to show without one, you are entering a world of pain.</div>
+</div>
 
 <!--
 - Important disclaimer before anyone walks away thinking "so AI is YOLO-ing 10k-line refactors now."
@@ -100,7 +103,7 @@ class: text-center
 gwg feat/ROO-981-onboarding-questions
 ```
 
-<div class="mt-10 text-sm opacity-60 max-w-2xl mx-auto">Linear ticket <code>ROO-981</code> → isolated worktree → dev server on a free port → Claude Code boots with <code>/feature ROO-42</code> pre-loaded → TDD, tests, docs, visual verification, PR, CI loop, review feedback — all handled.</div>
+<div class="mt-10 text-sm opacity-60 max-w-2xl mx-auto">Linear ticket <code>ROO-981</code> → isolated worktree → dev server on a free port → Claude Code boots with <code>/feature ROO-42</code> pre-loaded → Confirm plan + ACs → TDD, tests, docs, visual verification, PR, CI loop, review feedback — all handled.</div>
 
 <!--
 - One shell command. Branch name IS the interface.
@@ -116,7 +119,7 @@ layout: center
 
 <AsciinemaPlayer src="/recordings/01-gwg-feature.cast" :speed="1.5" :autoplay="true" :loop="false" :cols="120" :rows="30" />
 
-<div class="text-xs mt-2 opacity-60 text-center">Real session "replayed" from the analyzed transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged.<br/><span class="text-vc-teal-400">1h 50m clock time</span></div>
+<div class="text-xs mt-2 opacity-60 text-center">Real session "replayed" from the analyzed transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged.<br/><span class="text-vc-teal-400">1h 50m clock time</span><br/><span>$109 in list price usage</span><br/><span>I run 5-6, sometimes up to 10 of these in parallel</span></div>
 
 <!--
 - Mostly silent. A few beats to land out loud:
@@ -185,9 +188,9 @@ It's also **scar tissue** — every issue I've hit that likely will recur is now
 
 ::right::
 
-<div class="ml-8 pull-quote">"NEVER place test files in <code>web/pages/</code> — causes <code>PageNotFoundError</code> in production builds."</div>
+<div class="ml-8 pull-quote">"Always set <code>restartPolicy = { enabled = false }</code> on ECS batch jobs. The module default restarts completed jobs indefinitely — caused <strong>duplicate email sends</strong> in prod."</div>
 
-<div class="ml-8 pull-quote-attribution">CLAUDE.md · note #15 · learned the hard way</div>
+<div class="ml-8 pull-quote-attribution">CLAUDE.md · note #12 · no hook can catch a Terraform default</div>
 
 <!--
 - Generic skill: "create a branch." CLAUDE.md: "branch from dev, not main, pattern feat/ROO-XXX."
