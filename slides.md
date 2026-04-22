@@ -300,7 +300,7 @@ User will need to run manually
 
 <div class="flex justify-center items-center">
 
-```mermaid {scale: 0.6}
+```mermaid {scale: 0.55}
 flowchart LR
   subgraph entry["Entry points"]
     direction TB
@@ -309,13 +309,16 @@ flowchart LR
     chore["/chore"]
   end
 
-  feature --> prloop
-  bugfix --> prloop["/prloop-enhanced<br/>self-review · PR · CI loop"]
-  chore --> prloop
+  feature --> iterreview
+  bugfix --> iterreview["/iterative-review"]
+  chore --> iterreview
+  iterreview --> cra["code-review-architect ×4<br/>generalist + 3 specialists"]
+  iterreview --> prloop["/prloop-enhanced<br/>PR · CI loop"]
   prloop --> simplify["/simplify"]
-  prloop -.->|opt-in| learnings["/review-learnings"]
 
-  iterreview["/iterative-review"] --> cra["code-review-architect ×4<br/>generalist + 3 specialists"]
+  feature -.->|opt-in| learnings["/review-learnings"]
+  bugfix -.-> learnings
+  chore -.-> learnings
 
   style entry fill:#085041,color:#E1F5EE,stroke:#5DCAA5
   style iterreview fill:#1D9E75,color:#F5F1E8,stroke:#5DCAA5
@@ -329,9 +332,16 @@ flowchart LR
 <div class="text-xs opacity-60 text-center mt-4">Leaf skills (<code>/verify</code>, <code>/regression</code>, <code>/ticket</code>, <code>/followup</code>, <code>/five-whys</code>, …) listed in the text-form backup slide.</div>
 
 <!--
-- Say out loud what the diagram shows: Orchestrators /feature, /bugfix, /chore converge on /prloop-enhanced. /iterative-review fans out 4 specialists (that's the next slide). /review-learnings is opt-in after each run.
+- The REAL flow, verified against the skill files:
+  1. All three orchestrators run /iterative-review (mandatory, Phase 10/11) before they hand off.
+  2. iterative-review fans out to 4 parallel code-review-architect subagents (next slide details this).
+  3. Then /prloop-enhanced takes over — simplify, reflect, commit, PR, CI loop.
+  4. /simplify is called INSIDE /prloop-enhanced (not before it).
+  5. /review-learnings is opt-in at the END of the orchestrator, after /prloop-enhanced returns.
+  6. /prloop-enhanced also re-invokes /iterative-review during the CI review-feedback loop — not shown for clarity.
+- Visual verification happens INLINE in each orchestrator via agent-browser / chrome-devtools — /verify is a standalone leaf skill for ad-hoc use, not composed here.
+- Root-cause analysis in /bugfix happens inline in Phase 2 — /five-whys is only called by /sentry-fix and /cloudwatch-errors.
 - Change /prloop-enhanced once, all three entry points get the new behavior. That's the composability payoff.
-- Leaves are intentionally off the diagram — they do one thing and don't compose. Backup slide has the full list.
 -->
 
 ---
@@ -715,15 +725,15 @@ pnpm install
 
 # Backup: Skills — text form
 
-### Orchestrators (call other skills)
+### Orchestrators and their full phase sequence
 
-- **`/feature ROO-XXX`** — ticket → plan → TDD → verify → docs → `/prloop-enhanced`
-- **`/bugfix ROO-XXX`** — same, but bug-first TDD (reproduce → fail → fix → pass)
-- **`/chore ROO-XXX`** — same, classifies chore type to pick testing strategy
-- **`/prloop-enhanced`** — shared final mile: self-review → `/simplify` → reflect → commit → PR → CI loop
-- **`/sentry-fix`** · **`/cloudwatch-errors`** — error-driven entry points → `/five-whys`
+- **`/feature`** — ticket → clarify → ACs → plan → branch → **TDD** → verify suite → visual verify (inline) → Showboat → **`/iterative-review`** → **`/prloop-enhanced`** → report → opt-in **`/review-learnings`**
+- **`/bugfix`** — ticket → **diagnose root cause** (inline, not `/five-whys`) → ACs → branch → **TDD** → verify suite → visual verify → Showboat → **`/iterative-review`** → **`/prloop-enhanced`** → report → opt-in **`/review-learnings`**
+- **`/chore`** — same skeleton as `/feature`, but classifies chore type to pick the testing + visual-verify strategy
+- **`/prloop-enhanced`** (internal sequence) — self-review → **`/simplify`** → reflect → commit → PR → poll CI + claude-review-action → address feedback → re-run **`/iterative-review`** → push
+- **`/sentry-fix`** · **`/cloudwatch-errors`** — error-driven entry points → **`/five-whys`** → Linear issue → worktree
 
-### Leaves (single purpose)
+### Leaves (single purpose, not composed)
 
 `/ticket` · `/verify` · `/regression` · `/test-signup` · `/followup` · `/five-whys` · `/review-learnings` (opt-in meta) · `/prfeedback` · `/db-connect` · `/db-analysis`
 
@@ -731,9 +741,9 @@ pnpm install
 
 `/simplify` (code-simplifier) · `/code-review:code-review` · `/frontend-design:frontend-design` · `/vercel:*` (~20) · `/telegram:*`
 
-### The special one
+### The fan-out one
 
-**`/iterative-review`** → fans out four parallel reviewers via the `code-review-architect` subagent: generalist + scale/N+1 + silent-failure + security/API-surface specialist. Loops up to 4× until convergence.
+**`/iterative-review`** → four parallel `code-review-architect` subagents: generalist + scale/N+1 + silent-failure + security/API-surface. Loops up to 4× until convergence.
 
 ---
 
