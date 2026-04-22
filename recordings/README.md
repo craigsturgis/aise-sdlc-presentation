@@ -3,6 +3,24 @@
 Two recordings are referenced by the deck. Both should be brief, silent, and sped up
 for stage playback. Asciinema's web player supports `speed` and `autoplay` params.
 
+## ⭐ Current approach: synthesize, don't record
+
+Claude Code sessions don't capture cleanly through a pty (TUI redraw issues) and
+real sessions are mostly CI-waiting dead time anyway. We synthesize a cinematic
+replay from the session JSONL instead.
+
+```bash
+python3 scripts/build-cast.py \
+  --session ~/.claude/projects/<project>/<session-id>.jsonl \
+  --out public/recordings/01-gwg-feature.cast
+```
+
+The script parses the JSONL for real artifacts (ticket, PR number, commit subjects,
+files touched, review rounds) and lays them onto a fixed storyboard designed for
+90-second stage playback. Edit the `storyboard()` function in `scripts/build-cast.py`
+to adjust beat timing or content. Output lives in `public/recordings/` so the
+Slidev dev server serves it.
+
 ## Setup
 
 ```bash

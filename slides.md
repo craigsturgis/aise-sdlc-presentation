@@ -114,10 +114,13 @@ layout: center
 
 # Act 1 — watch it run
 
-<div class="asciinema-container mt-8 p-6 text-center opacity-80 max-w-3xl mx-auto"><div class="text-4xl my-8">▶</div><div>recordings/01-gwg-feature.cast · ~90 sec</div><div class="text-xs mt-2 opacity-70">ticket in → merged PR out, 6× speed</div></div>
+<AsciinemaPlayer src="/recordings/01-gwg-feature.cast" :speed="1.5" :autoplay="true" :loop="false" :cols="120" :rows="30" />
+
+<div class="text-xs mt-2 opacity-60 text-center">Real session replayed from the transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged. Elapsed: 7h. Attended: ~40 min.</div>
 
 <!--
 - No narration. Just let it play.
+- This is a synthesized replay from the session JSONL — the real thing had hours of CI-wait dead time.
 - After: "OK, now let's rewind and see what actually fired."
 -->
 
