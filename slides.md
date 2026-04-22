@@ -109,14 +109,14 @@ gwg feat/ROO-981-onboarding-questions
 -->
 
 ---
+layout: center
+---
 
 # Act 1 — watch it run
 
-<div class="mx-auto" style="max-width: 880px; max-height: 380px;">
-  <AsciinemaPlayer src="/recordings/01-gwg-feature.cast" :speed="1.5" :autoplay="true" :loop="false" :cols="120" :rows="30" />
-</div>
+<AsciinemaPlayer src="/recordings/01-gwg-feature.cast" :speed="1.5" :autoplay="true" :loop="false" :cols="120" :rows="30" />
 
-<div class="text-xs mt-4 opacity-60 text-center">Real session replayed from the transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged.<br/><span class="text-vc-teal-400">7h 11m elapsed · 1h 50m attended · 4h 28m walked away</span> <span class="opacity-70">(Claude crash + a long break)</span></div>
+<div class="text-xs mt-2 opacity-60 text-center">Real session replayed from the transcript — ticket <code>ROO-981</code> → PR <code>#3134</code> merged.<br/><span class="text-vc-teal-400">7h 11m elapsed · 1h 50m attended · 4h 28m walked away</span> <span class="opacity-70">(Claude crash + a long break)</span></div>
 
 <!--
 - Mostly silent. A few beats to land out loud:
