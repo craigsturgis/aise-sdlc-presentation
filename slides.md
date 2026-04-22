@@ -300,7 +300,7 @@ User will need to run manually
 
 <div class="flex justify-center items-center">
 
-```mermaid {scale: 0.55}
+```mermaid {scale: 0.5}
 flowchart LR
   subgraph entry["Entry points"]
     direction TB
@@ -309,27 +309,36 @@ flowchart LR
     chore["/chore"]
   end
 
+  bugfix -.->|inline| fivewhys["/five-whys<br/>root cause"]
+  feature -.->|inline| verify["/verify<br/>visual check"]
+  bugfix -.->|inline| verify
+  chore -.->|inline| verify
+
   feature --> iterreview
   bugfix --> iterreview["/iterative-review"]
   chore --> iterreview
   iterreview --> cra["code-review-architect ×4<br/>generalist + 3 specialists"]
-  iterreview --> prloop["/prloop-enhanced<br/>PR · CI loop"]
-  prloop --> simplify["/simplify"]
+  iterreview --> prloop
 
-  feature -.->|opt-in| learnings["/review-learnings"]
-  bugfix -.-> learnings
-  chore -.-> learnings
+  subgraph prloop["/prloop-enhanced — PR · CI loop"]
+    simplify["/simplify"]
+  end
+
+  prloop --> learnings["/review-learnings<br/>opt-in · final step"]
 
   style entry fill:#085041,color:#E1F5EE,stroke:#5DCAA5
   style iterreview fill:#1D9E75,color:#F5F1E8,stroke:#5DCAA5
   style cra fill:#2C3447,color:#9FE1CB,stroke:#5DCAA5
-  style simplify fill:#2C3447,color:#F5F1E8,stroke:#5A5750
+  style prloop fill:#085041,color:#F5F1E8,stroke:#5DCAA5
+  style simplify fill:#1E2433,color:#E1F5EE,stroke:#5DCAA5
   style learnings fill:#2C3447,color:#F5F1E8,stroke:#5A5750
+  style verify fill:#1E2433,color:#B8B4A8,stroke:#5A5750
+  style fivewhys fill:#1E2433,color:#B8B4A8,stroke:#5A5750
 ```
 
 </div>
 
-<div class="text-xs opacity-60 text-center mt-4">Leaf skills (<code>/verify</code>, <code>/regression</code>, <code>/ticket</code>, <code>/followup</code>, <code>/five-whys</code>, …) listed in the text-form backup slide.</div>
+<div class="text-xs opacity-60 text-center mt-4">Solid edges = literal skill invocations. Dotted <em>inline</em> edges = the same concept handled inside the orchestrator's phases.</div>
 
 <!--
 - The REAL flow, verified against the skill files:
