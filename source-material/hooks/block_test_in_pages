@@ -1,0 +1,30 @@
+#!/bin/bash
+# PostToolUse hook: blocks test files written inside web/pages/ (non-api routes).
+#
+# Next.js discovers ALL files under pages/ as routes. Test files there cause
+# PageNotFoundError in production builds. Tests should go in web/src/__tests__/pages/.
+# See CLAUDE.md Important Development Notes #15.
+
+# Read JSON from STDIN
+if [ -t 0 ]; then
+  exit 0
+fi
+
+HOOK_JSON=$(cat)
+
+FILE_PATH=$(echo "$HOOK_JSON" | jq -r '.tool_input.file_path // .tool_input.filePath // empty' 2>/dev/null || true)
+
+if [ -z "$FILE_PATH" ]; then
+  exit 0
+fi
+
+# Check if file is a test file inside web/pages/ but NOT under web/pages/api/
+if echo "$FILE_PATH" | grep -qE '(^|/)web/pages/' && \
+   ! echo "$FILE_PATH" | grep -qE '(^|/)web/pages/api/' && \
+   echo "$FILE_PATH" | grep -qE '(\.(test|spec)\.(ts|tsx|js|jsx)$|__tests__/)'; then
+  echo "BLOCKED: Test file written to web/pages/ — this causes PageNotFoundError in production builds." >&2
+  echo "Move to web/src/__tests__/pages/ instead. See CLAUDE.md note #15." >&2
+  exit 2
+fi
+
+exit 0

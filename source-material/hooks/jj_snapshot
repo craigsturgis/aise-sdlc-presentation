@@ -1,0 +1,38 @@
+#!/bin/bash
+# PreToolUse hook: snapshots jj working copy before potentially destructive operations.
+# Adapted from https://github.com/panozzaj/claude-hooks
+#
+# Triggers jj's auto-snapshot so changes can be recovered from jj evolog/obslog.
+# Exits silently if jj isn't installed or not in a jj repo.
+
+# Safety: never let this hook crash Claude Code
+trap 'exit 0' ERR
+
+# Read JSON from STDIN to get cwd.
+# Note: PreToolUse payload may not include .cwd (it's documented for Stop hooks).
+# We try .cwd anyway and fall back to the shell's working directory, which is
+# typically the repo root when invoked by Claude Code.
+CWD=""
+if [ ! -t 0 ]; then
+  HOOK_JSON=$(cat)
+  CWD=$(echo "$HOOK_JSON" | jq -r '.cwd // empty' 2>/dev/null || true)
+fi
+
+if [ -n "$CWD" ]; then
+  cd "$CWD" 2>/dev/null || exit 0
+fi
+
+# Exit silently if jj is not installed
+if ! command -v jj &> /dev/null; then
+  exit 0
+fi
+
+# Exit silently if not in a jj repo
+if ! jj root &> /dev/null; then
+  exit 0
+fi
+
+# Run jj status to trigger a snapshot of the working copy
+jj status > /dev/null 2>&1
+
+exit 0

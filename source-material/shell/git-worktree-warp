@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# git-worktree-warp - Create a git worktree and cd into it
+# Usage: git-worktree-warp <branch-name> [worktree-name]
+
+set -e
+
+if [ $# -eq 0 ]; then
+    echo "Usage: git-worktree-warp <branch-name> [worktree-name]"
+    echo "  branch-name: Name of the branch to create/checkout"
+    echo "  worktree-name: Optional name for the worktree directory (defaults to branch-name)"
+    exit 1
+fi
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "Error: Not in a git repository" >&2
+    exit 1
+fi
+
+BRANCH_NAME="$1"
+WORKTREE_NAME="${2:-$BRANCH_NAME}"
+
+# Get the repository root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+REPO_NAME=$(basename "$REPO_ROOT")
+
+# Create worktrees folder path (sibling to current repo)
+WORKTREES_FOLDER="$(dirname "$REPO_ROOT")/${REPO_NAME}-worktrees"
+WORKTREE_PATH="$WORKTREES_FOLDER/$WORKTREE_NAME"
+
+# Create worktrees folder if it doesn't exist
+if [ ! -d "$WORKTREES_FOLDER" ]; then
+    echo "Creating worktrees folder: $WORKTREES_FOLDER" >&2
+    mkdir -p "$WORKTREES_FOLDER"
+fi
+
+# Check if worktree path already exists
+if [ -d "$WORKTREE_PATH" ]; then
+    echo "Error: Directory $WORKTREE_PATH already exists" >&2
+    exit 1
+fi
+
+echo "Creating worktree at: $WORKTREE_PATH" >&2
+echo "Branch: $BRANCH_NAME" >&2
+
+# Get the default branch (main or master or whatever is configured)
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+# Fetch latest from origin
+echo "Fetching latest from origin..." >&2
+git fetch origin >&2
+
+# Create the worktree
+# Check if branch exists locally or remotely
+if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+    # Branch exists locally
+    git worktree add "$WORKTREE_PATH" "$BRANCH_NAME" >&2
+elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH_NAME"; then
+    # Branch exists on remote
+    git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME" "origin/$BRANCH_NAME" >&2
+else
+    # Create new branch from the default branch
+    git worktree add "$WORKTREE_PATH" -b "$BRANCH_NAME" "origin/$DEFAULT_BRANCH" >&2
+fi
+
+echo "Worktree created successfully!" >&2
+
+# Run project-specific setup if it exists
+if [[ -f "$WORKTREE_PATH/.worktree-setup" ]]; then
+    echo "Running project setup..." >&2
+    (cd "$WORKTREE_PATH" && ./.worktree-setup) >&2
+fi
+
+# Output the path for cd wrapper
+echo "$WORKTREE_PATH"

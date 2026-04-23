@@ -1,0 +1,37 @@
+#!/bin/bash
+# PostToolUse hook: blocks manually created migration SQL files.
+#
+# Migrations must be generated with `pnpm --filter @rootnote/web db:generate`
+# (or equivalent for other packages). Manually creating migration files
+# breaks Drizzle's journal tracking. See CLAUDE.md note #10.
+
+# Read JSON from STDIN
+if [ -t 0 ]; then
+  exit 0
+fi
+
+HOOK_JSON=$(cat)
+
+FILE_PATH=$(echo "$HOOK_JSON" | jq -r '.tool_input.file_path // .tool_input.filePath // empty' 2>/dev/null || true)
+
+if [ -z "$FILE_PATH" ]; then
+  exit 0
+fi
+
+# Block migration SQL files
+if echo "$FILE_PATH" | grep -qE '(^|/)migrations/[0-9]+.*\.sql$'; then
+  echo "BLOCKED: Manually creating migration files is not allowed." >&2
+  echo "Use 'pnpm --filter @rootnote/web db:generate' after modifying the schema." >&2
+  echo "See CLAUDE.md note #10." >&2
+  exit 2
+fi
+
+# Block drizzle journal edits
+if echo "$FILE_PATH" | grep -qE '_journal\.json$'; then
+  echo "BLOCKED: Manually editing the Drizzle migration journal is not allowed." >&2
+  echo "Use 'pnpm --filter @rootnote/web db:generate' to manage migrations." >&2
+  echo "See CLAUDE.md note #10." >&2
+  exit 2
+fi
+
+exit 0

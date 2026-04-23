@@ -1,0 +1,299 @@
+name: Playwright Full Regression
+
+# On-demand full regression suite that runs Playwright E2E tests
+# against deployed Amplify branches (dev, main/prod, or PR deploy previews)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Target to test: dev, main, PR number (1234), or branch name'
+        required: true
+        default: 'dev'
+        type: string
+      test_suite:
+        description: 'Test suite to run (leave empty for all)'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - onboarding
+          - content
+          - dataspaces
+
+permissions:
+  contents: read
+  id-token: write # Required for OIDC
+
+# Allow only one regression run per environment at a time
+concurrency:
+  group: playwright-regression-${{ github.event.inputs.target_branch }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  NODE_OPTIONS: '--max-old-space-size=4096'
+  # Amplify App ID - can be overridden via repository variable
+  AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID || '<AMPLIFY_APP_ID>' }}
+
+jobs:
+  playwright-regression:
+    name: Playwright E2E - ${{ github.event.inputs.target_branch }}
+    runs-on: ubuntu-latest-m
+    timeout-minutes: 30
+
+    steps:
+      - name: Validate inputs
+        run: |
+          TARGET_BRANCH="${{ github.event.inputs.target_branch }}"
+
+          # Validate branch name format (alphanumeric, hyphens, underscores, slashes)
+          if [[ ! "$TARGET_BRANCH" =~ ^[a-zA-Z0-9/_-]+$ ]]; then
+            echo "❌ Invalid target_branch format: $TARGET_BRANCH"
+            echo "   Branch names can only contain letters, numbers, hyphens, underscores, and slashes"
+            exit 1
+          fi
+
+          echo "✅ Input validation passed"
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        # Note: We checkout the current workflow's code (not the target branch)
+        # The target_branch input specifies which deployed environment to test against
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: GitHubActions-Playwright-${{ github.event.inputs.target_branch }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Set environment variables based on target branch
+        id: set-env
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TARGET_INPUT="${{ github.event.inputs.target_branch }}"
+
+          echo "🎯 Input: $TARGET_INPUT"
+
+          # Determine the Amplify branch name and environment
+          # - main: production custom domain
+          # - dev: dev custom domain
+          # - PR number (digits only): construct pr-{number} URL
+          # - branch name: look up PR number via GitHub API, construct pr-{number} URL
+          if [[ "$TARGET_INPUT" == "main" ]]; then
+            BASE_URL="https://app.example.app"
+            AMPLIFY_ENV="prod"
+            AMPLIFY_BRANCH="main"
+          elif [[ "$TARGET_INPUT" == "dev" ]]; then
+            BASE_URL="https://dev.example.app"
+            AMPLIFY_ENV="dev"
+            AMPLIFY_BRANCH="dev"
+          elif [[ "$TARGET_INPUT" =~ ^[0-9]+$ ]]; then
+            # Input is just a number - treat as PR number
+            PR_NUMBER="$TARGET_INPUT"
+            AMPLIFY_BRANCH="pr-${PR_NUMBER}"
+            BASE_URL="https://${AMPLIFY_BRANCH}.${AMPLIFY_APP_ID}.amplifyapp.com"
+            AMPLIFY_ENV="dev"
+            echo "📋 Interpreted as PR #${PR_NUMBER}"
+          elif [[ "$TARGET_INPUT" =~ ^pr-[0-9]+$ ]]; then
+            # Input is already in pr-{number} format
+            AMPLIFY_BRANCH="$TARGET_INPUT"
+            BASE_URL="https://${AMPLIFY_BRANCH}.${AMPLIFY_APP_ID}.amplifyapp.com"
+            AMPLIFY_ENV="dev"
+          else
+            # Input is a branch name - look up the PR number
+            echo "🔍 Looking up PR for branch: $TARGET_INPUT"
+
+            PR_INFO=$(gh pr list --head "$TARGET_INPUT" --json number,state --limit 1 2>/dev/null || echo "[]")
+            PR_NUMBER=$(echo "$PR_INFO" | jq -r '.[0].number // empty')
+
+            if [[ -n "$PR_NUMBER" && "$PR_NUMBER" != "null" ]]; then
+              AMPLIFY_BRANCH="pr-${PR_NUMBER}"
+              BASE_URL="https://${AMPLIFY_BRANCH}.${AMPLIFY_APP_ID}.amplifyapp.com"
+              AMPLIFY_ENV="dev"
+              echo "📋 Found PR #${PR_NUMBER} for branch $TARGET_INPUT"
+            else
+              echo "❌ Could not find a PR for branch: $TARGET_INPUT"
+              echo "   Please use one of:"
+              echo "   - 'dev' or 'main' for main environments"
+              echo "   - A PR number like '1077'"
+              echo "   - 'pr-1077' format"
+              echo "   - A branch name that has an open PR"
+              exit 1
+            fi
+          fi
+
+          echo "BASE_URL=$BASE_URL" >> $GITHUB_ENV
+          echo "AMPLIFY_ENV=$AMPLIFY_ENV" >> $GITHUB_ENV
+          echo "AMPLIFY_BRANCH=$AMPLIFY_BRANCH" >> $GITHUB_ENV
+          echo "PLAYWRIGHT_BASE_URL=$BASE_URL" >> $GITHUB_ENV
+
+          # Set impersonate user email based on environment (from GitHub vars)
+          if [[ "$AMPLIFY_ENV" == "prod" ]]; then
+            IMPERSONATE_EMAIL="${{ vars.E2E_IMPERSONATE_USER_EMAIL_PROD }}"
+          else
+            IMPERSONATE_EMAIL="${{ vars.E2E_IMPERSONATE_USER_EMAIL_DEV }}"
+          fi
+          if [[ -n "$IMPERSONATE_EMAIL" ]]; then
+            echo "E2E_IMPERSONATE_USER_EMAIL=$IMPERSONATE_EMAIL" >> $GITHUB_ENV
+            echo "✅ Impersonate user: $IMPERSONATE_EMAIL"
+          else
+            echo "ℹ️ No impersonate user configured - using default (test@test.test)"
+          fi
+
+          echo "✅ Amplify branch: $AMPLIFY_BRANCH"
+          echo "✅ Base URL: $BASE_URL"
+          echo "✅ Environment settings: $AMPLIFY_ENV"
+
+      - name: Retrieve configuration from SSM
+        run: |
+          echo "🔍 Retrieving configuration for $AMPLIFY_ENV environment..."
+
+          # Function to safely get parameter from /rootnote/{env}/ path
+          get_param() {
+            local param_name="$1"
+            aws ssm get-parameter --name "/rootnote/${AMPLIFY_ENV}/${param_name}" --with-decryption --query "Parameter.Value" --output text 2>/dev/null || echo ""
+          }
+
+          # Get Cognito User Pool ID from SSM (more reliable than runtime discovery)
+          COGNITO_USER_POOL_ID=$(get_param "E2E_COGNITO_USER_POOL_ID")
+          if [[ -z "$COGNITO_USER_POOL_ID" ]]; then
+            echo "❌ Could not retrieve Cognito User Pool ID from /rootnote/${AMPLIFY_ENV}/E2E_COGNITO_USER_POOL_ID"
+            exit 1
+          fi
+          echo "✅ Cognito User Pool ID: $COGNITO_USER_POOL_ID"
+          echo "COGNITO_USER_POOL_ID=$COGNITO_USER_POOL_ID" >> $GITHUB_ENV
+
+          # Get test user credentials from SSM
+          TEST_USER_EMAIL=$(get_param "E2E_TEST_USER_EMAIL")
+          TEST_USER_PASSWORD=$(get_param "E2E_TEST_USER_PASSWORD")
+
+          if [[ -z "$TEST_USER_EMAIL" || -z "$TEST_USER_PASSWORD" ]]; then
+            echo "❌ Could not retrieve test user credentials from /rootnote/${AMPLIFY_ENV}/"
+            echo "⚠️ Content and dataspaces tests will be skipped (require authenticated user)"
+            echo "TEST_USER_EMAIL=" >> $GITHUB_ENV
+            echo "TEST_USER_PASSWORD=" >> $GITHUB_ENV
+          else
+            echo "✅ Test user credentials retrieved for $AMPLIFY_ENV"
+            echo "TEST_USER_EMAIL=$TEST_USER_EMAIL" >> $GITHUB_ENV
+            echo "TEST_USER_PASSWORD=$TEST_USER_PASSWORD" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        timeout-minutes: 8
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify target environment is accessible
+        run: |
+          echo "🔍 Verifying $PLAYWRIGHT_BASE_URL is accessible..."
+
+          # Retry logic for temporary network issues
+          MAX_RETRIES=3
+          RETRY_DELAY=10
+
+          for ((i=1; i<=MAX_RETRIES; i++)); do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PLAYWRIGHT_BASE_URL" --max-time 30 || echo "000")
+
+            if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 400 ]]; then
+              echo "✅ Target environment accessible (HTTP $HTTP_STATUS)"
+              exit 0
+            elif [[ "$HTTP_STATUS" == "000" ]]; then
+              echo "⚠️ Attempt $i/$MAX_RETRIES: Connection failed"
+            elif [[ "$HTTP_STATUS" -ge 400 && "$HTTP_STATUS" -lt 500 ]]; then
+              echo "⚠️ Target returned HTTP $HTTP_STATUS - may still be usable for testing"
+              exit 0
+            else
+              echo "⚠️ Attempt $i/$MAX_RETRIES: HTTP $HTTP_STATUS"
+            fi
+
+            if [[ $i -lt $MAX_RETRIES ]]; then
+              echo "   Retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Could not reach $PLAYWRIGHT_BASE_URL after $MAX_RETRIES attempts"
+          exit 1
+
+      - name: Run Playwright tests
+        working-directory: web
+        run: |
+          TEST_SUITE="${{ github.event.inputs.test_suite }}"
+
+          if [[ -n "$TEST_SUITE" ]]; then
+            echo "🧪 Running $TEST_SUITE test suite against $PLAYWRIGHT_BASE_URL"
+            E2E_SUITE="$TEST_SUITE" pnpm exec playwright test --project="$TEST_SUITE"
+          else
+            echo "🧪 Running all test suites against $PLAYWRIGHT_BASE_URL"
+            pnpm exec playwright test
+          fi
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ env.PLAYWRIGHT_BASE_URL }}
+          COGNITO_USER_POOL_ID: ${{ env.COGNITO_USER_POOL_ID }}
+          TEST_USER_EMAIL: ${{ env.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ env.TEST_USER_PASSWORD }}
+          E2E_IMPERSONATE_USER_EMAIL: ${{ env.E2E_IMPERSONATE_USER_EMAIL }}
+          AWS_REGION: us-east-1
+          E2E_CLEANUP_BEFORE_RUN: 'true'
+          E2E_CLEANUP_MAX_AGE_MS: '3600000'
+          # Increase auth timeout for CI environments (can be slow)
+          E2E_AUTH_TIMEOUT: '30000'
+          E2E_FORM_TIMEOUT: '15000'
+          # Use 3 workers to avoid auth timeouts from concurrent logins
+          E2E_WORKERS: '3'
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report-${{ github.event.inputs.target_branch }}-${{ github.run_id }}
+          path: web/playwright-report/
+          retention-days: 14
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-results-${{ github.event.inputs.target_branch }}-${{ github.run_id }}
+          path: |
+            web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload failure screenshots
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-failures-${{ github.event.inputs.target_branch }}-${{ github.run_id }}
+          path: |
+            web/test-results/**/*.png
+            web/test-results/**/*.webm
+          retention-days: 7
+          if-no-files-found: ignore

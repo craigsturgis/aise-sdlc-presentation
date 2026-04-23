@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# git-worktree-go - Create a git worktree and start Claude Code with context
+# Usage: git-worktree-go <branch-name> [worktree-name]
+#
+# Branch naming convention:
+#   feat/TICKET-123-description  → feature workflow
+#   fix/TICKET-123-description   → bug fix workflow
+#   chore/TICKET-123-description → chore/maintenance workflow
+#
+# Outputs two lines to stdout:
+#   Line 1: worktree path
+#   Line 2: claude prompt (slash command)
+# All other output goes to stderr.
+
+set -e
+
+if [ $# -eq 0 ]; then
+    echo "Usage: git-worktree-go <branch-name> [worktree-name]" >&2
+    echo "" >&2
+    echo "Creates a worktree and starts Claude Code with the right context." >&2
+    echo "" >&2
+    echo "Examples:" >&2
+    echo "  git-worktree-go feat/ROO-42-workshop-admin" >&2
+    echo "  git-worktree-go fix/ROO-99-checkout-bug" >&2
+    echo "  git-worktree-go chore/update-deps" >&2
+    exit 1
+fi
+
+BRANCH_NAME="$1"
+
+# Parse the branch name
+PREFIX=$(echo "$BRANCH_NAME" | grep -oE '^[a-z]+/' | sed 's|/||')
+TICKET_ID=$(echo "$BRANCH_NAME" | grep -oiE '[A-Z]+-[0-9]+' | head -1 | tr '[:lower:]' '[:upper:]')
+DESCRIPTION=$(echo "$BRANCH_NAME" | sed 's|^[a-z]*/||' | sed 's|^[A-Z]*-[0-9]*-*||' | tr '-' ' ')
+
+# Map prefix to slash command
+case "$PREFIX" in
+    feat)
+        SKILL="feature"
+        ;;
+    fix)
+        SKILL="bugfix"
+        ;;
+    chore|refactor)
+        SKILL="chore"
+        ;;
+    *)
+        SKILL=""
+        ;;
+esac
+
+# Build the Claude prompt
+if [ -n "$SKILL" ] && [ -n "$TICKET_ID" ]; then
+    CLAUDE_PROMPT="/${SKILL} ${TICKET_ID}"
+elif [ -n "$SKILL" ]; then
+    CLAUDE_PROMPT="/${SKILL} ${DESCRIPTION}"
+else
+    CLAUDE_PROMPT="Work on branch ${BRANCH_NAME}: ${DESCRIPTION}"
+fi
+
+# Create the worktree (reuse the existing script)
+# Tell .worktree-setup not to launch Claude — we'll do it with the prompt
+export SKIP_CLAUDE_LAUNCH=1
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+WORKTREE_PATH=$("$SCRIPT_DIR/git-worktree-warp" "$@")
+
+echo "Parsed prompt: $CLAUDE_PROMPT" >&2
+
+# Output worktree path and prompt on stdout (all other output went to stderr)
+echo "$WORKTREE_PATH"
+echo "$CLAUDE_PROMPT"

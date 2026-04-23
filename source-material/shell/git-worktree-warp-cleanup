@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# git-worktree-warp-cleanup - Remove current worktree and switch back to main repo
+# Usage: git-worktree-warp-cleanup [--force]
+
+set -e
+
+FORCE_FLAG=false
+if [ "$1" = "--force" ] || [ "$1" = "-f" ]; then
+    FORCE_FLAG=true
+fi
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "Error: Not in a git repository"
+    exit 1
+fi
+
+# Check if we're in a worktree (not the main repository)
+if [ "$(git rev-parse --git-dir)" = ".git" ]; then
+    echo "Error: You're in the main repository, not a worktree"
+    echo "This script should only be run from within a worktree"
+    exit 1
+fi
+
+CURRENT_DIR=$(pwd)
+WORKTREE_ROOT=$(git rev-parse --show-toplevel)
+WORKTREE_PARENT=$(dirname "$WORKTREE_ROOT")
+
+# Get the main repository path
+MAIN_REPO=$(git rev-parse --git-common-dir | sed 's|/.git/worktrees/.*||')
+
+echo "Current worktree: $WORKTREE_ROOT"
+echo "Worktree parent directory: $WORKTREE_PARENT"
+echo "Main repository: $MAIN_REPO"
+
+# Check for uncommitted changes unless --force is used
+if [ "$FORCE_FLAG" = false ]; then
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "Error: You have uncommitted changes in this worktree"
+        echo "Commit your changes first, or use --force to discard them"
+        echo ""
+        echo "Uncommitted changes:"
+        git status --short
+        exit 1
+    fi
+    
+    # Check for unpushed commits
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    if git show-ref --verify --quiet "refs/remotes/origin/$CURRENT_BRANCH"; then
+        UNPUSHED=$(git rev-list "origin/$CURRENT_BRANCH..HEAD" --count 2>/dev/null || echo "0")
+        if [ "$UNPUSHED" -gt 0 ]; then
+            echo "Warning: You have $UNPUSHED unpushed commit(s) on branch '$CURRENT_BRANCH'"
+            echo "Push your changes first, or use --force to proceed anyway"
+            exit 1
+        fi
+    fi
+fi
+
+# Release any allocated ports for this worktree
+WORKTREE_PORTS_SCRIPT="$(dirname "$0")/worktree-ports"
+if [[ -x "$WORKTREE_PORTS_SCRIPT" ]]; then
+    echo "Releasing allocated ports..."
+    "$WORKTREE_PORTS_SCRIPT" release "$WORKTREE_ROOT" 2>/dev/null || true
+fi
+
+# Change to main repository directory
+cd "$MAIN_REPO"
+
+echo "Removing worktree: $WORKTREE_ROOT"
+
+# Remove the worktree
+git worktree remove "$WORKTREE_ROOT" ${FORCE_FLAG:+--force}
+
+# Remove the worktree directory if it still exists
+if [ -d "$WORKTREE_ROOT" ]; then
+    echo "Removing worktree directory: $WORKTREE_ROOT"
+    rm -rf "$WORKTREE_ROOT"
+fi
+
+# Change to the parent directory of where the worktree was
+cd "$WORKTREE_PARENT"
+
+echo "Worktree removed successfully!"
+echo "Current directory: $(pwd)"

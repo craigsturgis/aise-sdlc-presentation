@@ -1,0 +1,98 @@
+#!/bin/bash
+# PostToolUse hook: runs oxlint on changed JS/TS files.
+#
+# oxlint is a fast Rust-based linter (~5ms per file) that handles rules
+# disabled in ESLint via eslint-plugin-oxlint. Runs before eslint in
+# lint-staged; this hook mirrors that for the agentic loop.
+#
+# Target: < 200ms per invocation.
+
+HOOK_NAME="oxlint"
+FILE_PATTERN='\.(js|jsx|ts|tsx|mjs|cjs)$'
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPTS_DIR/hook_common.bash"
+
+# Find the nearest .oxlintrc.json by walking up from the changed file.
+find_oxlint_config_dir() {
+  local file_path="$1"
+  local dir
+  dir=$(dirname "$file_path")
+
+  while [ "$dir" != "." ] && [ "$dir" != "/" ]; do
+    if [ -f "$dir/.oxlintrc.json" ]; then
+      echo "$dir"
+      return 0
+    fi
+    dir=$(dirname "$dir")
+  done
+
+  # Fallback: check project root
+  if [ -f ".oxlintrc.json" ]; then
+    echo "."
+    return 0
+  fi
+
+  return 1
+}
+
+if ! OXLINT_CONFIG_DIR=$(find_oxlint_config_dir "$CHANGED_FILES"); then
+  hook_status na "no .oxlintrc.json"
+fi
+
+# Determine oxlint command — check workspace node_modules first, then root
+if [ -f "$OXLINT_CONFIG_DIR/node_modules/.bin/oxlint" ]; then
+  OXLINT_CMD=("$(cd "$OXLINT_CONFIG_DIR" && pwd)/node_modules/.bin/oxlint")
+elif [ -f "node_modules/.bin/oxlint" ]; then
+  OXLINT_CMD=("$(pwd)/node_modules/.bin/oxlint")
+else
+  OXLINT_CMD=("pnpm" "exec" "oxlint")
+fi
+
+# Make the file path relative to the config directory
+if [ "$OXLINT_CONFIG_DIR" != "." ]; then
+  RELATIVE_FILE="${CHANGED_FILES#$OXLINT_CONFIG_DIR/}"
+else
+  RELATIVE_FILE="$CHANGED_FILES"
+fi
+
+if [ "$VERBOSE" = true ]; then
+  echo "Changed JavaScript/TypeScript files detected:"
+  echo "  $CHANGED_FILES (config dir: $OXLINT_CONFIG_DIR)"
+  echo ""
+  echo "Running oxlint (${OXLINT_CMD[*]})..."
+  echo ""
+fi
+
+# Run oxlint from the config directory so it finds .oxlintrc.json
+run_oxlint() {
+  (cd "$OXLINT_CONFIG_DIR" && "${OXLINT_CMD[@]}" -c .oxlintrc.json "$@" "$RELATIVE_FILE")
+}
+
+OX_REPORT=$(mktemp)
+trap 'rm -f "$OX_REPORT"' EXIT
+
+# Step 1: Run oxlint in report-only mode to capture all issues
+run_oxlint > "$OX_REPORT" 2>&1
+OX_STATUS=$?
+
+if [ $OX_STATUS -eq 0 ]; then
+  hook_status pass
+fi
+
+# Step 2: Run oxlint with --fix to auto-correct what it can
+run_oxlint --fix > /dev/null 2>&1
+FIX_STATUS=$?
+
+if [ $FIX_STATUS -eq 0 ]; then
+  # All issues were auto-fixed — show report so LLM sees what was corrected
+  echo "Auto-fixed the following oxlint issues:"
+  cat "$OX_REPORT"
+  echo ""
+  hook_status pass
+else
+  # Some issues remain — show what's still broken
+  run_oxlint > "$OX_REPORT" 2>&1
+  cat "$OX_REPORT" >&2
+  echo "" >&2
+  hook_status fail
+fi
