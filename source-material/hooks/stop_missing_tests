@@ -1,0 +1,131 @@
+#!/bin/bash
+# Stop hook: Blocks when source code is changed without any test files being touched.
+# Adapted from https://github.com/panozzaj/claude-hooks
+#
+# Purely deterministic — no LLM needed. Checks git working directory for changed
+# files, classifies them as source/test/excluded, and blocks if source files changed
+# without any test files being modified.
+#
+# Adapted for the RootNote monorepo with appropriate exclusion paths.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+COOLDOWN="$SCRIPT_DIR/cooldown"
+HOOK_NAME="stop_missing_tests"
+
+# Read JSON from stdin
+if [ -t 0 ]; then
+  exit 0
+fi
+INPUT=$(cat)
+
+# Check stop_hook_active to avoid infinite loops
+STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null || true)
+if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
+  exit 0
+fi
+
+# Extract cwd and cd to it
+CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
+if [ -z "$CWD" ] || [ ! -d "$CWD" ]; then
+  exit 0
+fi
+cd "$CWD"
+
+# Verify it's a git repo
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  exit 0
+fi
+
+# Get changed files (staged + unstaged + untracked)
+CHANGED_FILES=$(git diff --name-only HEAD 2>/dev/null || true)
+UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null || true)
+ALL_CHANGED=$(printf '%s\n%s' "$CHANGED_FILES" "$UNTRACKED" | grep -v '^$' | sort -u)
+
+if [ -z "$ALL_CHANGED" ]; then
+  exit 0
+fi
+
+# Classify files
+HAS_SOURCE=false
+HAS_TESTS=false
+SOURCE_LIST=""
+
+while IFS= read -r file; do
+  basename=$(basename "$file")
+  dir="$file"
+
+  # --- Test file detection ---
+  if echo "$basename" | grep -qE '(_test\.|_spec\.|\.test\.|\.spec\.)'; then
+    HAS_TESTS=true
+    continue
+  fi
+  if echo "$basename" | grep -qE '^test_.*\.'; then
+    HAS_TESTS=true
+    continue
+  fi
+  if echo "$dir" | grep -qE '(^|/)(spec|test|tests|__tests__|e2e)/'; then
+    HAS_TESTS=true
+    continue
+  fi
+
+  # --- Excluded directory detection (RootNote-specific) ---
+  # Config, scripts, CI, infrastructure, amplify, email templates, storybook
+  if echo "$dir" | grep -qE '(^|/)(\.github|\.husky|\.claude|\.storybook|config|scripts|bin|docker|tmp|node_modules|infrastructure|amplify|demos)/'; then
+    continue
+  fi
+  # Migration files
+  if echo "$dir" | grep -qE '(^|/)migrations/'; then
+    continue
+  fi
+  # Email templates (visual, not unit-testable)
+  if echo "$dir" | grep -qE '(^|/)src/email/'; then
+    continue
+  fi
+
+  # --- Excluded extension detection ---
+  ext="${basename##*.}"
+  case "$ext" in
+    md|txt|yml|yaml|json|toml|lock|gitignore|env) continue ;;
+    css|scss|sass|less) continue ;;
+    html|erb|ejs) continue ;;
+    svg|png|jpg|gif|ico|webp) continue ;;
+    sql) continue ;;
+  esac
+
+  # --- Source file detection ---
+  case "$ext" in
+    ts|tsx|js|jsx|mjs|cjs|sh)
+      HAS_SOURCE=true
+      if [ -n "$SOURCE_LIST" ]; then
+        SOURCE_LIST="$SOURCE_LIST"$'\n'"$file"
+      else
+        SOURCE_LIST="$file"
+      fi
+      ;;
+  esac
+done <<< "$ALL_CHANGED"
+
+# Block only if source files changed and no test files changed
+if [ "$HAS_SOURCE" = "true" ] && [ "$HAS_TESTS" = "false" ]; then
+  # Check cooldown before blocking
+  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
+  "$COOLDOWN" check "$SESSION_ID" "$HOOK_NAME" || exit 0
+
+  # Build file list for reason message
+  FILE_COUNT=$(echo "$SOURCE_LIST" | wc -l | tr -d ' ')
+  if [ "$FILE_COUNT" -le 5 ]; then
+    FILE_LIST=$(echo "$SOURCE_LIST" | paste -sd',' - | sed 's/,/, /g')
+  else
+    FIRST_FILES=$(echo "$SOURCE_LIST" | head -5 | paste -sd',' - | sed 's/,/, /g')
+    REMAINING=$((FILE_COUNT - 5))
+    FILE_LIST="${FIRST_FILES} (and ${REMAINING} more)"
+  fi
+
+  REASON="[stop_missing_tests] You modified source files without adding or updating tests: ${FILE_LIST}. Please add tests for your changes."
+  jq -n --arg reason "$REASON" '{"decision": "block", "reason": $reason}' 2>/dev/null || echo '{"decision": "block", "reason": "Source files changed without tests. Please add tests."}'
+  "$COOLDOWN" record "$SESSION_ID" "$HOOK_NAME"
+  exit 0
+fi
+
+# No source-only changes — let Claude stop
+exit 0

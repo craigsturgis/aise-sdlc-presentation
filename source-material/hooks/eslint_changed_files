@@ -1,0 +1,105 @@
+#!/bin/bash
+# PostToolUse hook: runs ESLint on changed JS/TS files with auto-fix.
+# Adapted from https://github.com/panozzaj/claude-hooks
+#
+# Prefers eslint_d (daemon, ~60ms) over cold eslint (~700ms).
+# Target: < 200ms per invocation.
+
+HOOK_NAME="eslint"
+FILE_PATTERN='\.(js|jsx|ts|tsx|mjs|cjs)$'
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPTS_DIR/hook_common.bash"
+
+# Determine the workspace directory containing the eslint config.
+# In our monorepo, each workspace (web/, services/rootnote-api/, etc.)
+# has its own eslint.config.mjs. We need to find the nearest one.
+find_eslint_config_dir() {
+  local file_path="$1"
+  local dir
+  dir=$(dirname "$file_path")
+
+  while [ "$dir" != "." ] && [ "$dir" != "/" ]; do
+    if [ -f "$dir/eslint.config.mjs" ] || [ -f "$dir/eslint.config.js" ] || [ -f "$dir/eslint.config.cjs" ]; then
+      echo "$dir"
+      return 0
+    fi
+    dir=$(dirname "$dir")
+  done
+
+  # Fallback: check project root
+  if [ -f "eslint.config.mjs" ] || [ -f "eslint.config.js" ] || [ -f "eslint.config.cjs" ]; then
+    echo "."
+    return 0
+  fi
+
+  return 1
+}
+
+if ! ESLINT_CONFIG_DIR=$(find_eslint_config_dir "$CHANGED_FILES"); then
+  hook_status na "no eslint config"
+fi
+
+# Determine ESLint command - prefer eslint_d (daemon) over cold eslint
+# Use array to avoid word-splitting issues (SC2086).
+# Resolve to absolute path since we'll cd into the config directory.
+if command -v eslint_d &> /dev/null && [ -z "$NO_ESLINT_D" ]; then
+  ESLINT_CMD=("eslint_d")
+elif [ -f "$ESLINT_CONFIG_DIR/node_modules/.bin/eslint" ]; then
+  ESLINT_CMD=("$(cd "$ESLINT_CONFIG_DIR" && pwd)/node_modules/.bin/eslint")
+elif [ -f "node_modules/.bin/eslint" ]; then
+  ESLINT_CMD=("$(pwd)/node_modules/.bin/eslint")
+else
+  ESLINT_CMD=("pnpm" "exec" "eslint")
+fi
+
+# Make the file path relative to the eslint config directory
+if [ "$ESLINT_CONFIG_DIR" != "." ]; then
+  RELATIVE_FILE="${CHANGED_FILES#$ESLINT_CONFIG_DIR/}"
+else
+  RELATIVE_FILE="$CHANGED_FILES"
+fi
+
+if [ "$VERBOSE" = true ]; then
+  echo "Changed JavaScript/TypeScript files detected:"
+  echo "  $CHANGED_FILES (config dir: $ESLINT_CONFIG_DIR)"
+  echo ""
+  echo "Running ESLint (${ESLINT_CMD[*]}) with auto-fix..."
+  echo ""
+fi
+
+# Run eslint from the config directory so it finds the config
+run_eslint() {
+  (cd "$ESLINT_CONFIG_DIR" && "${ESLINT_CMD[@]}" "$@" "$RELATIVE_FILE")
+}
+
+# Step 1: Run ESLint in report-only mode to capture all issues
+ESLINT_REPORT=$(mktemp)
+ESLINT_REMAINING=$(mktemp)
+trap 'rm -f "$ESLINT_REPORT" "$ESLINT_REMAINING"' EXIT
+
+run_eslint > "$ESLINT_REPORT" 2>&1
+REPORT_STATUS=$?
+
+# If no issues found, we're done
+if [ $REPORT_STATUS -eq 0 ]; then
+  hook_status pass
+fi
+
+# Step 2: Run ESLint with --fix to auto-correct what it can
+run_eslint --fix > /dev/null 2>&1
+FIX_STATUS=$?
+
+if [ $FIX_STATUS -eq 0 ]; then
+  # All issues were auto-fixed — show report so LLM sees what was corrected
+  echo "Auto-fixed the following ESLint issues:"
+  cat "$ESLINT_REPORT"
+  echo ""
+  hook_status pass
+else
+  # Some issues remain — show what's still broken
+  # Reuse ESLINT_REMAINING (pre-created for trap cleanup)
+  run_eslint > "$ESLINT_REMAINING" 2>&1
+  cat "$ESLINT_REMAINING" >&2
+  echo "" >&2
+  hook_status fail
+fi

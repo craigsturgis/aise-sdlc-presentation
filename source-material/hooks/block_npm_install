@@ -1,0 +1,32 @@
+#!/bin/bash
+# PreToolUse hook: blocks `npm install` commands to enforce pnpm usage.
+#
+# This monorepo uses pnpm. npm install can create conflicting lock files
+# and break the workspace. See CLAUDE.md Package Manager section.
+
+# Read JSON from STDIN
+if [ -t 0 ]; then
+  exit 0
+fi
+
+HOOK_JSON=$(cat)
+
+# Extract the command from the Bash tool input
+COMMAND=$(echo "$HOOK_JSON" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+
+if [ -z "$COMMAND" ]; then
+  exit 0
+fi
+
+# Check for npm install/add/ci commands (but not npm run, npm exec, etc.)
+if echo "$COMMAND" | grep -qE '\bnpm\s+(install|i|add|ci)\b'; then
+  # Allow npm commands inside amplify/ directory (Lambda functions use yarn/npm)
+  if echo "$COMMAND" | grep -qE '(cd\s+amplify|--prefix\s+amplify|amplify/)'; then
+    exit 0
+  fi
+  echo "BLOCKED: Use pnpm instead of npm for dependency management in this monorepo." >&2
+  echo "Run: pnpm install, pnpm add <pkg>, etc." >&2
+  exit 2
+fi
+
+exit 0

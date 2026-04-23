@@ -1,0 +1,76 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      checks: read
+      statuses: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: "claude"
+          track_progress: true
+          use_sticky_comment: true
+          prompt: |
+            Review this pull request. A thorough local review has already been performed covering: test coverage gaps, comments/documentation, error handling, operator correctness (??/||), dead code, type safety, and pattern consistency. These categories account for ~74% of all review findings historically.
+
+            Focus on the ~26% of issues that require external perspective — things the implementing agent cannot easily catch about its own code:
+
+            **Domain-Specific Correctness:**
+            - Are there subtle business logic bugs that require understanding the domain (e.g., OAuth token rotation semantics, API rate-limit vs quota distinction, DynamoDB eventual consistency behavior)?
+            - Are date/time calculations correct for the domain (timezone handling, date range boundaries, partial-day aggregation)?
+            - Do error classifications match the external API's actual behavior (not just what the docs say)?
+
+            **Cross-Module & Integration Impact:**
+            - Will this change break existing consumers (API routes, Redux selectors, hooks) that the author may not have checked?
+            - Are there PG migration flag considerations (pgOnly, write-through, flag evaluation per CLAUDE.md rules #18-23)?
+            - Does the change correctly handle the DynamoDB-to-PostgreSQL migration patterns (write-through, legacyId fallback, enrichment parity)?
+            - Do field mappings between services stay in sync?
+
+            **Architecture & Design Decisions:**
+            - Is there a better abstraction or location for this code?
+            - Will this pattern cause problems as usage scales?
+            - Are there cross-cutting concerns (caching, retry behavior, error propagation) that affect other modules?
+
+            **Security (always flag):**
+            - Authentication/authorization gaps
+            - Data exposure — does the response leak sensitive fields?
+            - PII in logs at info level or above
+            - Credentials in URL query parameters instead of POST body/headers
+
+            **Deprioritize** (local review covers these — only flag if egregious):
+            - Unused imports/variables, dead code
+            - Minor style/formatting nits
+            - Missing test files for new modules
+            - Generic type safety issues
+            - Missing comments on straightforward code
+
+            Reference CLAUDE.md for project conventions, especially the "Code Quality Rules" and "Important Development Notes" sections. Be concise and specific — only flag issues worth a review round-trip. Prioritize: bugs > security > integration impact > architecture.
+          settings: |
+            {
+              "permissions": {
+                "allow": [
+                  "Bash(pnpm test:ci:web)",
+                  "Bash(pnpm lint:web --quiet)",
+                  "Bash(pnpm --filter @rootnote/web typecheck)"
+                ]
+              }
+            }

@@ -1,0 +1,84 @@
+{
+  "hooks": {
+    "Notification": [],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": ".claude/hooks/oxlint_changed_files",
+            "type": "command"
+          },
+          {
+            "command": ".claude/hooks/eslint_changed_files",
+            "type": "command"
+          },
+          {
+            "command": ".claude/hooks/shellcheck_changed_files",
+            "type": "command"
+          },
+          {
+            "command": ".claude/hooks/block_test_in_pages",
+            "type": "command"
+          },
+          {
+            "command": ".claude/hooks/block_manual_migration",
+            "type": "command"
+          }
+        ],
+        "matcher": "Write|Edit"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": ".claude/hooks/jj_snapshot",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|Edit|Write"
+      },
+      {
+        "hooks": [
+          {
+            "command": ".claude/hooks/block_npm_install",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": ".claude/hooks/stop_missing_tests",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

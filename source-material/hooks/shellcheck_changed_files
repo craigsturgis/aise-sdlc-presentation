@@ -1,0 +1,34 @@
+#!/bin/bash
+# PostToolUse hook: runs ShellCheck on changed shell scripts.
+# Adapted from https://github.com/panozzaj/claude-hooks
+
+HOOK_NAME="shellcheck"
+FILE_PATTERN='\.sh$'
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPTS_DIR/hook_common.bash"
+
+if ! command -v shellcheck &> /dev/null; then
+  hook_status na "shellcheck not installed"
+fi
+
+if [ "$VERBOSE" = true ]; then
+  echo "Changed shell scripts detected:"
+  echo "  $CHANGED_FILES"
+  echo ""
+  echo "Running ShellCheck..."
+  echo ""
+fi
+
+SC_OUTPUT=$(mktemp)
+trap 'rm -f "$SC_OUTPUT"' EXIT
+
+shellcheck "$CHANGED_FILES" > "$SC_OUTPUT" 2>&1
+SC_STATUS=$?
+
+if [ $SC_STATUS -eq 0 ]; then
+  hook_status pass
+else
+  cat "$SC_OUTPUT" >&2
+  echo "" >&2
+  hook_status fail
+fi

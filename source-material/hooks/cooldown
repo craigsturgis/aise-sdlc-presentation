@@ -1,0 +1,50 @@
+#!/bin/bash
+# Shared cooldown helper for Stop hooks.
+# Adapted from https://github.com/panozzaj/claude-hooks
+#
+# Prevents the same hook from blocking repeatedly in the same session.
+#
+# Usage:
+#   cooldown check SESSION_ID HOOK_NAME [COOLDOWN_SECONDS]
+#     Exit 0 = OK to proceed (not in cooldown)
+#     Exit 1 = in cooldown, skip blocking
+#
+#   cooldown record SESSION_ID HOOK_NAME
+#     Records current timestamp as last block time
+#
+# Default cooldown: 300 seconds (5 minutes).
+
+ACTION="$1"
+SESSION_ID="$2"
+HOOK_NAME="$3"
+
+if [ -z "$SESSION_ID" ] || [ -z "$HOOK_NAME" ]; then
+  exit 0
+fi
+
+# Sanitize session ID to prevent path traversal in filename
+SESSION_ID="${SESSION_ID//\//_}"
+
+COOLDOWN_FILE="${TMPDIR:-/tmp}/claude_stop_${SESSION_ID}_${HOOK_NAME}"
+
+case "$ACTION" in
+  check)
+    COOLDOWN_SECONDS="${4:-${STOP_HOOK_COOLDOWN:-300}}"
+    if [ -f "$COOLDOWN_FILE" ]; then
+      LAST_BLOCK=$(cat "$COOLDOWN_FILE")
+      # Guard against empty or corrupt cooldown file
+      if ! [[ "$LAST_BLOCK" =~ ^[0-9]+$ ]]; then
+        exit 0
+      fi
+      NOW=$(date +%s)
+      if [ $((NOW - LAST_BLOCK)) -lt "$COOLDOWN_SECONDS" ]; then
+        exit 1
+      fi
+    fi
+    exit 0
+    ;;
+  record)
+    date +%s > "$COOLDOWN_FILE"
+    exit 0
+    ;;
+esac
